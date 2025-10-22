@@ -2,7 +2,7 @@
 
 **Version:** 1.0
 
-**Date:** 2025-10-09
+**Date:** 2025-10-22
 
 **Author:** Bartosz Sobocki
 
@@ -84,7 +84,7 @@
 
 ### Time & Resources
 
-- **Timeline:** 3 weeks (13.10.2025 - 3.11.2025)
+- **Timeline:** 3 weeks (23.10.2025 - 13.11.2025)
 - **Phase breakdown:**
     - Phase 1: 2 Weeks
     - Phase 2: 1 Week
