@@ -735,10 +735,10 @@ public:
     CSVRecord(const std::vector<std::string> fields,
              std::shared_ptr<const ColumnIndexMap> columnMap = nullptr);
 
-    CSVRecord(const CSVReader&) = default;
-    CSVRecord(CSVReader&&) noexcept = default;
-    CSVRecord& operator=(const CSVReader&) = default;
-    CSVRecord& operator=(CSVReader&&) noexcept = default;
+    CSVRecord(const CSVRecord&) = default;
+    CSVRecord(CSVRecord&&) noexcept = default;
+    CSVRecord& operator=(const CSVRecord&) = default;
+    CSVRecord& operator=(CSVRecord&&) noexcept = default;
 
     template<typename T = std::string>
     std::optional<T> get(const size_t index) const;
