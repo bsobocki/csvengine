@@ -690,7 +690,7 @@ public:
 
     bool good() const;
     bool hasHeader() const;
-    size_t currentLineNum () const; // currentRecordIndex + 1
+    int currentLineNum () const; // currentRecordIndex + 1
     explicit operator bool() const; // return good()
 
     // getters
@@ -707,12 +707,11 @@ private:
     friend class CSVIterator;
 
     CSVRecord currentRecord;
-    size_t currentRecordIndex;
+    int currentRecordIndex = -1;
 
     std::ifstream csvFile;
     const CSVConfig config;
     std::vector<std::string> columnNames;
-    size_t currentLine = 0;
 };
 ```
 
