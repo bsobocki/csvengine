@@ -13,19 +13,21 @@ while [[ $# -gt 0 ]]; do
         cd .. # Return to root so next commands work correctly
       ;;
     -r|--run|run|demo)
-      if [ -f "./build/demo/csvengine_demo" ]; then
+      executable="./build/demo/csvengine_demo"
+      if [ -f $executable ]; then
         echo "Running application..."
-        ./build/demo/csvengine_demo
+        $executable
       else
-        echo "Error: Executable not found. Did you build first?"
+        echo "Error: Executable $executable not found. Did you build first?"
       fi
       ;;
       -t|--tests|tests)
-      if [ -f "./build/tests/run_tests" ]; then
+      executable="./build/tests/run_tests"
+      if [ -f $executable ]; then
         echo "Running tests..."
-        ./build/tests/run_tests
+        $executable
       else
-        echo "Error: Executable not found. Did you build first?"
+        echo "Error: Executable $executable not found. Did you build first?"
       fi
       ;;
     *)
