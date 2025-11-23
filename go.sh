@@ -1,5 +1,17 @@
 #!/usr/bin/bash
 
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+function echoSuccess() {
+  printf "${GREEN}✓ %s${NC}\n" "$1"
+}
+
+function echoError() {
+  printf "${RED}✗ Error: %s${NC}\n" "$1"
+}
+
 function do_clean() {
   if [ -d "build" ]; then
     # This command deletes everything in 'build' EXCEPT the '_deps' folder (where GTest lives)
@@ -30,9 +42,11 @@ function do_run() {
     echo "Running demo application..."
     $executable
   else
-    echo "Error: Executable $executable not found. Did you build first?"
+    echoError "Executable $executable not found. Did you build first?"
     echo "Run"
-    echo " ./go.sh build run"
+    echo ""
+    echo "   ./go.sh build run"
+    echo ""
     echo "to build and run tests."
   fi
 }
@@ -43,9 +57,11 @@ function do_tests() {
     echo "Running tests..."
     $executable
   else
-    echo "Error: Executable $executable not found. Did you build first?"
+    echoError "Executable $executable not found. Did you build first?"
     echo "Run"
-    echo " ./go.sh build tests"
+    echo ""
+    echo "   ./go.sh build tests"
+    echo ""
     echo "to build and run tests."
   fi
 }
