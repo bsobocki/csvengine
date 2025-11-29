@@ -70,7 +70,10 @@ while [[ $# -gt 0 ]]; do
   case $1 in
     -c|--clean|clean)
       do_clean
-      ;; 
+      ;;
+    --clean-all|--cleanAll|--cleanall|clean-all|cleanall|cleanAll)
+      do_cleanall
+      ;;
     -b|--build|build)
       do_build
       ;;
