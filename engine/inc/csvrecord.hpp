@@ -20,6 +20,7 @@ public:
 
     template<typename T = std::string>
     std::optional<T> get(const size_t index) const;
+
     template<typename T = std::string>
     std::optional<T> get(const std::string& columnName) const;
 
