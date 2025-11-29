@@ -330,8 +330,8 @@ Spaces inside quotes will be read as they are, but spaces around delimiters will
 **Output**: Sequence of records (rows), each record containing fields
 
 **Steps**:
-1. Read line from input: char by char (Phase 1) / chunk by chunk (Phase 2) / mapping memory (Phase 2+)
-2. If first line is an header: store as a column names - defined by user (num of line or -1 for no_header option) with line 0 as default (Phase 1) + detected (all strings in the first line, but second line has differen data types - Phase 2+)
+1. **Buffering:** The engine will maintain an internal fixed-size buffer (e.g., `4KB` or `64KB`). It will read chunks from `std::ifstream` into this buffer to reduce system calls. The parser iterates over this buffer (Phase 1). Memory mapping will be introduced for optimization in Phase 2+.
+2. If first line is a header: store as a column names - defined by user (num of line or -1 for no_header option) with line 0 as default (Phase 1) + detected (all strings in the first line, but second line has differen data types - Phase 2+)
 3. Split line into fields ("respecting quotes")
 4. Convert fields to requested types
 5. Return row to user
@@ -381,7 +381,23 @@ delimiter/newline, not when `\n` appears inside quotes.
 
 **Decision: [Reading Strategy]**
 - **Context:** 
-- **Decision:** Phase 1: read char-by-char, Phase 2: read chunk-by-chunk, Phase 2+: memory mapping for limited IO calls/operations
+- **Decision:** Phase 1: read chunk-by-chunk, Phase 2+: memory mapping for limited IO calls/operations
+
+**Decision: [Data Ownership vs Zero-Copy]**
+- **Context:** Should CSVRecord own the strings (safe) or view them (fast)?
+- **Conflict:** "Zero-copy" requires views, but easy API requires ownership.
+- **Decision:**
+    - **Phase 1:** CSVRecord will own data (`std::vector<std::string>`). "Zero-copy" applies only to internal parsing (parsing the line to find delimiters without creating substrings), but the final record is copied.
+    - **Phase 2:** Introduce a specialized CSVView class that is strictly zero-copy (`std::vector<std::string_view>`) for advanced users who understand lifetime management.
+
+**Decision: [Type Conversion Strategy]**
+- **Context:** How to convert string fields to numbers (int, double) efficiently?
+- **Options:**
+  - A) `std::stringstream` (Slow, heavy overhead)
+  - B) `std::stoi`/`std::stod` (Throws exceptions, requires `std::string` allocation, locale dependent)
+  - C) `std::from_chars` (C++17/20, non-allocating, works on `string_view`, locale independent, fastest)
+- **Decision:** Option C (`std::from_chars`)
+- **Rationale:** Since we target C++20, we should use the most efficient standard tool. It allows us to parse numbers directly from the internal string storage without creating temporary string copies.
 
 **Decision: Multi-Pass Iterator Behavior**
 - **Context:** What happens when begin() is called after iteration completes?
