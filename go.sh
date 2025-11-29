@@ -80,6 +80,10 @@ while [[ $# -gt 0 ]]; do
     -r|--run|run|demo)
       do_run
       ;;
+    --rebuild|rebuild)
+      do_clean
+      do_build
+      ;;
     -t|--tests|tests)
       do_tests
       ;;
