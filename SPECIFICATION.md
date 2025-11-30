@@ -14,13 +14,12 @@
 
 ## 1.1 Purpose
 
-**Learning Goals:** (if applicable)
+**Learning Goals:**
 - advanced C++,
 - optimization,
 - specification,
 - architecture,
-- interface/API specification,
-- implementation design
+- interface/API design
 
 **Programming Goals:**
 - implementation of production-quality tool.
@@ -34,6 +33,7 @@
 ### Must Have (MVP)
 
 - ✅ Parse RFC 4180 compliant CSVs
+- ✅ Inform about constraints exceeded (e.g.value too big)
 - ✅ Row-by-row iteration with STL-compatible iterators
 - ✅ Streaming mode (constant memory usage) - read row by row from file
 - ✅ Access field by index within record (row)
@@ -82,13 +82,6 @@
 
 ## 1.3 Constraints
 
-### Time & Resources
-
-- **Timeline:** 3 weeks (23.10.2025 - 13.11.2025)
-- **Phase breakdown:**
-    - Phase 1: 2 Weeks
-    - Phase 2: 1 Week
-
 ### Memory Usage (Phase 1)
 
 - Streaming mode: O(1) - single row in memory
@@ -96,8 +89,8 @@
 
 ### Memory Usage (Phase 2)
 
-- InMemory mode: O(n) - entire file in memory
-- Seekable mode: O(1) - single row in memory
+- InMemory mode: $O(nm)$ - entire file in memory ( $n \text{ rows} \times m \text{ columns}$ )
+- Seekable mode: $O(m)$ - single row in memory
 
 ### Platform
 
@@ -825,28 +818,22 @@ class CSVReader {
 
 public:
     class CSVIterator {
-    public:
-        const CSVRecord& operator*() const;
-        const CSVRecord* operator->() const;
+        public:
+            // Iterator Traits (Required for STL compatibility)
+            using iterator_category = std::input_iterator_tag;
+            using value_type        = CSVRecord;
+            using difference_type   = std::ptrdiff_t;
+            using pointer           = const CSVRecord*;
+            using reference         = const CSVRecord&;
 
-        // forward only
-        Iterator& operator++();     // pre-increment ++iter
-        Iterator operator++(int);  // post-increment iter++
-
-        bool operator==(const Iterator&) const;
-        bool operator==(Iterator&&) const;
-        bool operator!=(const Iterator&) const;
-        bool operator!=(Iterator&&) const;
-
-    private:
-        friend class CSVReader;
-
-        CSVIterator(CSVReader*, bool);
-
-        CSVReader* csvReader; // non-const pointer for calling csvReader->nextRecord()
-        CSVRecord currentRecord; // for save dereferencing
-        bool isEnd;
-    }
+            explicit CSVIterator(CSVReader* reader);
+            CSVIterator& operator++();
+            const CSVRecord& operator*() const;
+            bool operator!=(const CSVIterator& other) const;
+        
+        private:
+            CSVReader* _reader;
+    };
 
 // ...
 }
@@ -859,6 +846,28 @@ public:
 [Describe how data moves through the system]
 
 **Input → Processing → Output**
+
+```
+[User Code]
+     │ calls nextRecord()
+     ▼
+[CSVReader] <──────────────────────────────────────────────┐
+     │ 1. Is buffer low? ──┤Yes├──> [Read from File]       │
+     │ 2. Create view of buffer                            │
+     │ 3. Call parser.parse_chunk(view)                    │
+     ▼                                                     │
+[CSVParser]                                                │
+     │ 1. Scan characters (State Machine)                  │
+     │ 2. Handle Quotes / Escapes                          │
+     │ 3. Return ParseResult                               │
+     │    { Status, BytesConsumed, Fields }                │
+     ▼                                                     │
+[CSVReader]                                                │
+     │ Status == NeedMoreData? ────────────────────────────┘
+     │ Status == RecordFound?
+     ▼
+[CSVRecord] (Constructed & Returned)
+```
 
 ---
 
