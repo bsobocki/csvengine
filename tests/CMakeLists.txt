@@ -1,5 +1,8 @@
 # Create the executable for our tests
-add_executable(run_tests tests.cpp)
+add_executable(run_tests 
+  tests.cpp
+  csvreader_test.cpp
+)
 
 # Link our test executable against:
 # 1. gtest_main: Google Test's main function and library
@@ -8,6 +11,13 @@ target_link_libraries(run_tests
   PRIVATE
     gtest_main
     csvengine
+)
+
+# Copy test_data directory to the build directory
+add_custom_command(TARGET run_tests POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_data
+    ${CMAKE_CURRENT_BINARY_DIR}/test_data
 )
 
 # Find all tests defined with the TEST() macro and add them to CTest

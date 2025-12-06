@@ -5,18 +5,17 @@
 #include <optional>
 #include <vector>
 
-class CSVRecord {
+class CsvRecord {
 public:
     using ColumnIndexMap = std::unordered_map<std::string, size_t>;
 
-    explicit CSVRecord(const size_t fieldCount);
-    CSVRecord(const std::vector<std::string> fields,
-             std::shared_ptr<const ColumnIndexMap> columnMap = nullptr);
+    CsvRecord()=default;
+    explicit CsvRecord(const std::vector<std::string>& fields, const std::vector<std::string>& headers = {});
 
-    CSVRecord(const CSVRecord&) = default;
-    CSVRecord(CSVRecord&&) noexcept = default;
-    CSVRecord& operator=(const CSVRecord&) = default;
-    CSVRecord& operator=(CSVRecord&&) noexcept = default;
+    CsvRecord(const CsvRecord&) = default;
+    CsvRecord(CsvRecord&&) noexcept = default;
+    CsvRecord& operator=(const CsvRecord&) = default;
+    CsvRecord& operator=(CsvRecord&&) noexcept = default;
 
     template<typename T = std::string>
     std::optional<T> get(const size_t index) const;
@@ -27,12 +26,15 @@ public:
     std::string_view operator[](size_t index) const;
     std::string_view operator[](std::string_view column) const;
 
+    std::vector<std::string> fields() const;
+    std::vector<std::string> headers() const;
+
     size_t size() const;
 
 private:
     template<typename T>
     std::optional<T> convert(const std::string& value) const;
 
-    std::vector<std::string> fields; // fields as strings
-    std::shared_ptr<const ColumnIndexMap> columnMap; // for mapping name to index - more memory, but O(1) lookup
+    std::vector<std::string> fields_; // fields as strings
+    std::vector<std::string> headers_; // for mapping name to index - more memory, but O(1) lookup
 };

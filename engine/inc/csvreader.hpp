@@ -10,56 +10,58 @@
 #include <csvconfig.hpp>
 #include <csvrecord.hpp>
 
-class CSVReader {
+class CsvReader {
 public:
     // Construction & Configuration
-    explicit CSVReader(const std::string& filePath, const CSVConfig = {});
+    explicit CsvReader(const std::string& filePath, const CsvConfig = {});
 
     // No copy (owns file handle)
-    CSVReader(const CSVReader&) = delete;
-    CSVReader& operator=(const CSVReader&) = delete;
+    CsvReader(const CsvReader&) = delete;
+    CsvReader& operator=(const CsvReader&) = delete;
     // Move-only
-    CSVReader(CSVReader&&) noexcept = default;
-    CSVReader& operator=(CSVReader&&) noexcept = default;
+    CsvReader(CsvReader&&) noexcept = default;
+    CsvReader& operator=(CsvReader&&) noexcept = default;
 
     bool good() const;
-    bool hasHeader() const;
-    std::size_t lineNumber () const; // currentRecordIndex + 1
+    bool has_header() const;
+    std::size_t line_number () const; // currentRecordIndex + 1
     explicit operator bool() const; // return good()
 
     // getters
-    CSVConfig getConfig() const;
-    const CSVRecord& currentRecord() const;
-    std::optional<CSVRecord> nextRecord();
+    CsvConfig config() const;
+    const CsvRecord& current_record() const;
+    bool next_record();
     const std::vector<std::string>& headers() const;
 
-    class CSVIterator {
+    class CsvIterator {
         public:
             // Iterator Traits (Required for STL compatibility)
             using iterator_category = std::input_iterator_tag;
-            using value_type        = CSVRecord;
+            using value_type        = CsvRecord;
             using difference_type   = std::ptrdiff_t;
-            using pointer           = const CSVRecord*;
-            using reference         = const CSVRecord&;
+            using pointer           = const CsvRecord*;
+            using reference         = const CsvRecord&;
 
-            explicit CSVIterator(CSVReader* reader);
-            CSVIterator& operator++();
-            const CSVRecord& operator*() const;
-            bool operator!=(const CSVIterator& other) const;
+            explicit CsvIterator(CsvReader* reader);
+            CsvIterator& operator++();
+            const CsvRecord& operator*() const;
+            bool operator!=(const CsvIterator& other) const;
         
         private:
-            CSVReader* _reader;
+            CsvReader* reader_;
     };
-    CSVIterator begin();
-    CSVIterator end(); 
+    CsvIterator begin();
+    CsvIterator end();
 
 private:
-    friend class CSVIterator;
+    void read_headers();
 
-    CSVRecord _currentRecord;
-    int _currentRecordIndex = -1;
+    friend class CsvIterator;
 
-    std::ifstream _csvFile;
-    const CSVConfig _config;
-    std::vector<std::string> _headers;
+    CsvRecord current_record_;
+    long long current_record_idx_ = -1;
+
+    std::ifstream csv_file_;
+    const CsvConfig config_;
+    std::vector<std::string> headers_;
 };

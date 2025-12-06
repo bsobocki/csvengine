@@ -55,7 +55,8 @@ function do_tests() {
   executable="./build/tests/run_tests"
   if [ -f $executable ]; then
     echo "Running tests..."
-    $executable
+    cd build
+    ctest
   else
     echoError "Executable $executable not found. Did you build first?"
     echo "Run"

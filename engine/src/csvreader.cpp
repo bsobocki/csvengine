@@ -1,69 +1,79 @@
 #include <csvreader.hpp>
+#include <optional>
 
-CSVReader::CSVReader(const std::string& filePath, const CSVConfig config): _config(config), _currentRecord(0) {
-    _csvFile.open(filePath, std::ifstream::in);
+CsvReader::CsvReader(const std::string& filePath, const CsvConfig config): config_(config) {
+    csv_file_.open(filePath, std::ifstream::in);
 
-    if (!_csvFile.good())
-        throw std::runtime_error("CSVReader: cannot open " + filePath);
+    if (!csv_file_.good())
+        throw std::runtime_error("CsvReader: cannot open " + filePath);
+
+    if (config_.has_header) {
+        read_headers();
+    }
 }
 
-std::optional<CSVRecord> CSVReader::nextRecord() {
-
+void CsvReader::read_headers() {
+    if (!next_record()) throw std::runtime_error("Cannot read headers!");
+    headers_ = current_record().fields();
 }
 
-CSVReader::CSVIterator::CSVIterator(CSVReader* reader): _reader(reader) {
-    if (_reader && _reader->lineNumber() == 0) {
+bool CsvReader::next_record() {
+    return true;
+}
+
+CsvReader::CsvIterator::CsvIterator(CsvReader* reader): reader_(reader) {
+    if (reader_ && reader_->line_number() == 0) {
         operator++();
     }
 }
 
-CSVReader::CSVIterator& CSVReader::CSVIterator::operator++() {
-    if (_reader && !_reader->nextRecord())
-        _reader = nullptr;
+CsvReader::CsvIterator& CsvReader::CsvIterator::operator++() {
+    if (reader_ && !reader_->next_record())
+        reader_ = nullptr;
 
     return *this;
 }
 
-const CSVRecord& CSVReader::CSVIterator::operator*() const {
-    return _reader->currentRecord();
+const CsvRecord& CsvReader::CsvIterator::operator*() const {
+    return reader_->current_record();
 }
 
-bool CSVReader::CSVIterator::operator!=(const CSVIterator& other) const {
-    return this->_reader != other._reader;
+bool CsvReader::CsvIterator::operator!=(const CsvIterator& other) const {
+    return this->reader_ != other.reader_;
 }
 
-CSVReader::CSVIterator CSVReader::begin() {
-    return CSVReader::CSVIterator(this);
+CsvReader::CsvIterator CsvReader::begin() {
+    return CsvReader::CsvIterator(this);
 }
 
-CSVReader::CSVIterator CSVReader::end() {
-    return CSVReader::CSVIterator(nullptr);
+CsvReader::CsvIterator CsvReader::end() {
+    return CsvReader::CsvIterator(nullptr);
 }
 
-bool CSVReader::good() const {
-    return _csvFile.good();
+bool CsvReader::good() const {
+    return csv_file_.good();
 }
 
-bool CSVReader::hasHeader() const {
-    return _config.has_header;
+bool CsvReader::has_header() const {
+    return config_.has_header;
 }
 
-std::size_t CSVReader::lineNumber () const {
-    return _currentRecordIndex + 1;
+std::size_t CsvReader::line_number () const {
+    return current_record_idx_ + 1;
 }
 
-CSVReader::operator bool() const {
+CsvReader::operator bool() const {
     return good();
 }
 
-CSVConfig CSVReader::getConfig() const {
-    return _config;
+CsvConfig CsvReader::config() const {
+    return config_;
 }
 
-const CSVRecord& CSVReader::currentRecord() const {
-    return _currentRecord;
+const CsvRecord& CsvReader::current_record() const {
+    return current_record_;
 }
     
-const std::vector<std::string>& CSVReader::headers() const {
-    return _headers;
+const std::vector<std::string>& CsvReader::headers() const {
+    return headers_;
 }
