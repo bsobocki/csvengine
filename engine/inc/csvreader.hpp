@@ -30,7 +30,7 @@ public:
     // getters
     CsvConfig config() const;
     const CsvRecord& current_record() const;
-    bool next_record();
+    bool read_next_record();
     const std::vector<std::string>& headers() const;
 
     class CsvIterator {

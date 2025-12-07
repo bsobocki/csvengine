@@ -9,6 +9,6 @@ TEST(CsvReaderTest, ReadHeaders) {
     CsvReader reader("./test_data/simple_file.csv");
     EXPECT_TRUE(reader.has_header());
 
-    std::vector<std::string> expectedHeaders = {};// {"name" , "age", "country"};
+    std::vector<std::string> expectedHeaders = {"name" , "age", "country"};
     EXPECT_EQ(reader.headers(), expectedHeaders);
 }
