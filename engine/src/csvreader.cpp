@@ -20,15 +20,19 @@ namespace {
     }
 }
 
-CsvReader::CsvReader(const std::string& filePath, const CsvConfig config): config_(config) {
-    csv_file_.open(filePath, std::ifstream::in);
+CsvReader::CsvReader(const std::string& filepath, const CsvConfig config)
+    : config_(config), csv_file_path_(filepath), buffer_(filepath) {
 
-    if (!csv_file_.good())
-        throw std::runtime_error("CsvReader: cannot open " + filePath);
+    if (!buffer_.good())
+        throw std::runtime_error("CsvReader: cannot open " + filepath);
 
     if (config_.has_header) {
         read_headers();
     }
+}
+
+CsvReader::CsvReader(std::unique_ptr<std::istream> stream, const CsvConfig config)
+    : config_(config), buffer_(std::move(stream)) {
 }
 
 void CsvReader::read_headers() {
@@ -39,15 +43,23 @@ void CsvReader::read_headers() {
 
 bool CsvReader::read_next_record() {
     // first attempt - naive implementation without quoting
-    if (csv_file_.good()) {
-        std::string line;
-        if (std::getline(csv_file_, line)) {
-            auto fields = split(line, config_.delimiter);
-            current_record_ = CsvRecord(std::move(fields));
-            return true;
+    if (!buffer_.good()) return false;
+
+    auto available_data_size = buffer_.available_data_size();
+    if (available_data_size == 0) {
+        if (buffer_.read_data() != CsvBuffer<>::ReadingResult::ok) {
+            return false;
         }
     }
-    return false;
+
+    auto data = buffer_.peek();
+    auto line = data.substr(0, data.find('\n'));
+
+    if (line.empty()) return false;
+
+    auto fields = split(line, config_.delimiter);
+    current_record_ = CsvRecord(std::move(fields));
+    return true;
 }
 
 CsvReader::CsvIterator::CsvIterator(CsvReader* reader): reader_(reader) {
@@ -80,7 +92,7 @@ CsvReader::CsvIterator CsvReader::end() {
 }
 
 bool CsvReader::good() const {
-    return csv_file_.good();
+    return buffer_.good();
 }
 
 bool CsvReader::has_header() const {

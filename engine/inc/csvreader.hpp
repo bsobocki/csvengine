@@ -9,11 +9,13 @@
 #include <optional>
 #include <csvconfig.hpp>
 #include <csvrecord.hpp>
+#include <csvbuffer.hpp>
 
 class CsvReader {
 public:
     // Construction & Configuration
     explicit CsvReader(const std::string& filePath, const CsvConfig = {});
+    explicit CsvReader(std::unique_ptr<std::istream> stream, const CsvConfig = {});
 
     // No copy (owns file handle)
     CsvReader(const CsvReader&) = delete;
@@ -61,7 +63,8 @@ private:
     CsvRecord current_record_;
     long long current_record_idx_ = -1;
 
-    std::ifstream csv_file_;
+    std::string csv_file_path_;
+    CsvBuffer<> buffer_;
     const CsvConfig config_;
     std::vector<std::string> headers_;
 };

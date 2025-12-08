@@ -11,12 +11,18 @@ template <size_t N = DEFAULT_CAPACITY>
 class CsvBuffer {
     public:
         explicit CsvBuffer(const std::string_view filename)
-            : file_(std::string(filename), std::ios::binary)
-            , data_(std::make_unique<char[]>(N)) {}
-        
-        ~CsvBuffer() {
-            file_.close();
+            : stream_(std::make_unique<std::ifstream>(std::string(filename), std::ios::binary))
+            , data_(std::make_unique<char[]>(N))
+        {
+            if (!stream_->good()) {
+                throw std::runtime_error("Failed to open file: " + std::string(filename));
+            }
         }
+
+        // for testing
+        explicit CsvBuffer(std::unique_ptr<std::istream> stream)
+            : stream_(std::move(stream))
+            , data_(std::make_unique<char[]>(N)) {}
 
         enum class ReadingResult {ok, eof, fail};
 
@@ -24,13 +30,13 @@ class CsvBuffer {
         ReadingResult read_first_bytes_of_data(size_t bytes) {
             bytes = std::min(bytes, capacity_);
 
-            file_.read(data_.get(), bytes);
+            stream_->read(data_.get(), bytes);
 
-            size_ = file_.gcount();
+            size_ = stream_->gcount();
             start_ = 0;
 
             if (size_ == 0)
-                return file_.eof() ? ReadingResult::eof : ReadingResult::fail;
+                return stream_->eof() ? ReadingResult::eof : ReadingResult::fail;
 
             return ReadingResult::ok;
         }
@@ -92,28 +98,24 @@ class CsvBuffer {
         }
 
         bool eof() const {
-            return available_data_size() == 0 && file_.eof();
-        }
-
-        bool is_open() const {
-            return file_.is_open();
+            return available_data_size() == 0 && stream_->eof();
         }
 
         bool good() const {
-            return file_.good();
+            return stream_->good();
         }
 
         void reset() {
-            file_.clear();
-            file_.seekg(0);
+            stream_->clear();
+            stream_->seekg(0);
             start_ = 0;
             size_ = 0;
         }
 
     private:
-        std::ifstream file_;
+        std::unique_ptr<std::istream> stream_;
+        std::unique_ptr<char[]> data_;
         size_t size_ = 0;
         size_t start_ = 0;
-        std::unique_ptr<char[]> data_;
         const size_t capacity_ = N;
 };
