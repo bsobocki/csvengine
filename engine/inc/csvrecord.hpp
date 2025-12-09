@@ -7,8 +7,6 @@
 
 class CsvRecord {
 public:
-    using ColumnIndexMap = std::unordered_map<std::string, size_t>;
-
     CsvRecord()=default;
     explicit CsvRecord(const std::vector<std::string>& fields, const std::vector<std::string>& headers = {});
     explicit CsvRecord(std::vector<std::string>&& fields, std::vector<std::string>&& headers = {});
@@ -39,6 +37,9 @@ private:
     std::optional<T> convert(const std::string_view& value) const;
     std::size_t column_to_index(const std::string_view& column_name) const;
 
-    std::vector<std::string> fields_; // fields as strings
-    std::vector<std::string> headers_; // for mapping name to index - more memory, but O(1) lookup
+    std::vector<std::string> fields_;
+    std::vector<std::string> headers_;
 };
+
+// TODO: separate class for CsvRecord with only std::string_view
+using CsvRecordView = CsvRecord;

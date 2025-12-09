@@ -10,6 +10,18 @@
 #include <csvconfig.hpp>
 #include <csvrecord.hpp>
 #include <csvbuffer.hpp>
+#include <functional>
+
+template<typename Func>
+concept CsvRecordViewBoolCallback = 
+    std::invocable<Func, const CsvRecordView&> &&
+    std::convertible_to<std::invoke_result_t<Func, const CsvRecordView&>, bool> &&
+    (!std::same_as<std::invoke_result_t<Func, const CsvRecordView&>, void>);
+
+template<typename Func>
+concept CsvRecordViewVoidCallback = 
+    std::invocable<Func, const CsvRecordView&> &&
+    std::same_as<std::invoke_result_t<Func, const CsvRecordView&>, void>;
 
 class CsvReader {
 public:
@@ -34,6 +46,12 @@ public:
     const CsvRecord& current_record() const;
     bool read_next_record();
     const std::vector<std::string>& headers() const;
+
+    template<CsvRecordViewBoolCallback Func>
+    void for_each(Func&& iteration);
+
+    template<CsvRecordViewVoidCallback Func>
+    void for_each(Func&& iteration);
 
     class CsvIterator {
         public:
