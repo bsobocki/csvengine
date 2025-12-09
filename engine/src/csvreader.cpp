@@ -61,7 +61,7 @@ bool CsvReader::read_next_record() {
         }
     }
 
-    auto data = buffer_.consume_all();
+    auto data = buffer_.consume_available_bytes();
     auto newline_pos = data.find('\n');
 
     if (newline_pos == std::string_view::npos) {

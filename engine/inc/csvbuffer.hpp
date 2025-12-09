@@ -76,12 +76,16 @@ class CsvBuffer {
         }
 
         // for range-based for loop on available data
-        std::string_view consume_all() {
+        std::string_view consume_available_bytes() {
             return consume_bytes(available_data_size());
         }
 
-        void consume(const size_t bytes) {
+        void shift(const size_t bytes) {
             start_ = std::min(start_ + bytes, size_);
+        }
+
+        void shift() {
+            start_ = size_;
         }
 
         std::string_view peek(const size_t bytes) const {

@@ -14,6 +14,11 @@ target_link_libraries(run_tests
     csvengine
 )
 
+target_include_directories(run_tests
+  PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_data
+)
+
 # Copy test_data directory to the build directory
 add_custom_command(TARGET run_tests POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
