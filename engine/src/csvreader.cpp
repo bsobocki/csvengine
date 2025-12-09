@@ -1,5 +1,6 @@
 #include <csvreader.hpp>
 #include <optional>
+#include <format>
 
 namespace {
     std::vector<std::string_view> split(std::string_view str, const char delim) {
@@ -51,8 +52,7 @@ void CsvReader::read_headers() {
 }
 
 bool CsvReader::read_next_record() {
-    // first attempt - naive implementation without quoting
-    if (!buffer_.good()) return false;
+    if (buffer_.eof() || !buffer_.good()) return false;
 
     auto available_data_size = buffer_.available_data_size();
     if (available_data_size == 0) {
@@ -80,7 +80,6 @@ bool CsvReader::read_next_record() {
     }
 
     auto fields = split(line, config_.delimiter);
-    std::cout << "FIELDS: " << fields.size() << std::endl;
     current_record_ = CsvRecord(std::move(fields));
     return true;
 }

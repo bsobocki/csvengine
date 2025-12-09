@@ -2,6 +2,8 @@
 
 #include <string>
 #include <csvconfig.hpp>
+#include <vector>
+#include <string_view>
 
 class CsvParser {
 public:
@@ -16,12 +18,16 @@ public:
 
     std::string err_msg() const;
 
+    std::vector<std::string_view> fields() const;
+    std::vector<std::string> fields_copy() const;
+
     // reset parser state
     void reset();
 
 private:
     CsvConfig config_;
     bool in_quotes_ = false;
+    std::vector<std::string_view> fields_ = {};
     size_t field_start_ = 0;
     size_t consumed_ = 0;
     std::string err_msg_ = "";

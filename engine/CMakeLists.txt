@@ -1,6 +1,7 @@
 add_library(csvengine
-    src/csvreader.cpp
     src/csvrecord.cpp
+    src/csvparser.cpp
+    src/csvreader.cpp
 )
 
 # public headers for the 'csvengine' library are located in the 'inc' directory.
