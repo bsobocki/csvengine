@@ -5,9 +5,11 @@
 constexpr size_t expected_no_data = 0;
 
 void verify_buffer_chunk(auto& buffer, const char* expected_start, size_t expected_size) {
+    using BufferType = std::remove_reference_t<decltype(buffer)>;
+
     EXPECT_TRUE(buffer.good());
 
-    EXPECT_EQ(buffer.read_data(), decltype(buffer)::ReadingResult::ok);
+    EXPECT_EQ(buffer.read_data(), BufferType::ReadingResult::ok);
     EXPECT_EQ(buffer.available_data_size(), expected_size);
 
     auto expected_data = std::string_view(expected_start, expected_size);
@@ -21,8 +23,9 @@ void verify_buffer_chunk(auto& buffer, const char* expected_start, size_t expect
 }
 
 void verify_eof(auto& buffer) {
-    EXPECT_EQ(buffer.read_data(), decltype(buffer)::ReadingResult::eof);
-    EXPECT_FALSE(buffer.eof());
+    using BufferType = std::remove_reference_t<decltype(buffer)>;
+    EXPECT_EQ(buffer.read_data(), BufferType::ReadingResult::eof);
+    EXPECT_TRUE(buffer.eof());
 }
 
 TEST(CsvBufferTest, Buffer64KB_ReadSimpleFile) {
@@ -124,7 +127,7 @@ TEST(CsvBufferTest, Buffer64B_PartialShift) {
 TEST(CsvBufferTest, Buffer64B_PartialConsume) {
     CsvBuffer<64> buffer(std::make_unique<std::istringstream>("ABCDEF"));
 
-    buffer.read_data();
+    EXPECT_EQ(buffer.read_data(), CsvBuffer<64>::ReadingResult::ok);
     EXPECT_EQ(buffer.available_data_size(), 6);
 
     EXPECT_EQ(buffer.consume_bytes(3), "ABC");
@@ -134,4 +137,16 @@ TEST(CsvBufferTest, Buffer64B_PartialConsume) {
 
     EXPECT_EQ(buffer.consume_bytes(3), "DEF");
     EXPECT_EQ(buffer.available_data_size(), expected_no_data);
+}
+
+TEST(CsvBufferTest, DefaultBuffer_ConsumeAllAndReset) {
+    auto data = "ABCDEF";
+    constexpr size_t data_size = 6;
+    CsvBuffer<> buffer(std::make_unique<std::istringstream>(data));
+
+    verify_buffer_chunk(buffer, data, data_size);
+    buffer.reset();
+    verify_buffer_chunk(buffer, data, data_size);
+
+    verify_eof(buffer);
 }
