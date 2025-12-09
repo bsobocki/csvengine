@@ -1,25 +1,7 @@
 #include <csvreader.hpp>
+#include <csvparser.hpp>
 #include <optional>
 #include <format>
-
-namespace {
-    std::vector<std::string_view> split(std::string_view str, const char delim) {
-        std::vector<std::string_view> result;
-
-        size_t start = 0;
-        size_t end = str.find(delim);
-
-        while(end != std::string_view::npos) {
-            result.push_back(str.substr(start, end - start));
-            start = end + 1;
-            end = str.find(delim, start);
-        }
-
-        result.push_back(str.substr(start));
-
-        return result;
-    }
-}
 
 CsvReader::CsvReader(const std::string& filepath, const CsvConfig config)
     : config_(config), csv_file_path_(filepath), buffer_(filepath) {
@@ -54,33 +36,32 @@ void CsvReader::read_headers() {
 bool CsvReader::read_next_record() {
     if (buffer_.eof() || !buffer_.good()) return false;
 
-    auto available_data_size = buffer_.available_data_size();
-    if (available_data_size == 0) {
-        if (buffer_.read_data() != CsvBuffer<>::ReadingResult::ok) {
-            return false;
+    CsvParser parser(config_);
+
+    while (true) {
+        auto available_data_size = buffer_.available_data_size();
+        if (available_data_size == 0) {
+            if (buffer_.read_data() != CsvBuffer<>::ReadingResult::ok) {
+                return false;
+            }
+        }
+
+        auto buffer_data = buffer_.consume_available_bytes();
+        auto result = parser.parse(buffer_data);
+        
+        switch(result) {
+            case CsvParser::ParseStatus::record:
+                buffer_.shift(parser.consumed());
+                current_record_ = CsvRecord(parser.fields());
+                return true;
+            
+            case CsvParser::ParseStatus::eob:
+                break;
+            
+            case CsvParser::ParseStatus::fail:
+                return false;
         }
     }
-
-    auto data = buffer_.consume_available_bytes();
-    auto newline_pos = data.find('\n');
-
-    if (newline_pos == std::string_view::npos) {
-        if (data.empty()) return false;
-
-        auto fields = split(data, config_.delimiter);
-        current_record_ = CsvRecord(std::move(fields));
-        return true;
-    }
-
-    auto line = data.substr(0, newline_pos);
-
-    if (line.empty()) {
-        current_record_ = CsvRecord();
-        return true;
-    }
-
-    auto fields = split(line, config_.delimiter);
-    current_record_ = CsvRecord(std::move(fields));
     return true;
 }
 
