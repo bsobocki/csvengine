@@ -1,15 +1,18 @@
 #pragma once
 
 #include <string>
-#include <csvconfig.hpp>
 #include <vector>
 #include <string_view>
 
-class CsvParser {
+#include <csvconfig.hpp>
+
+namespace csv {
+
+class Parser {
 public:
     enum class ParseStatus {record, eob, fail};
 
-    explicit CsvParser(CsvConfig config);
+    explicit Parser(Config config);
 
     // function parse doesn't reset the parser state
     ParseStatus parse(std::string_view buffer);
@@ -28,10 +31,12 @@ private:
     ParseStatus naive_parse(std::string_view buffer);
     ParseStatus csv_quotes_parse(std::string_view buffer);
 
-    CsvConfig config_;
+    Config config_;
     bool in_quotes_ = false;
     std::vector<std::string_view> fields_ = {};
     size_t field_start_ = 0;
     size_t consumed_ = 0;
     std::string err_msg_ = "";
 };
+
+}

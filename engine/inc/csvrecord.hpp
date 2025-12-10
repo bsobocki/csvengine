@@ -5,18 +5,20 @@
 #include <optional>
 #include <vector>
 
-class CsvRecord {
-public:
-    CsvRecord()=default;
-    explicit CsvRecord(const std::vector<std::string>& fields, const std::vector<std::string>& headers = {});
-    explicit CsvRecord(std::vector<std::string>&& fields, std::vector<std::string>&& headers = {});
-    explicit CsvRecord(const std::vector<std::string_view>& fields, const std::vector<std::string_view>& headers = {});
-    explicit CsvRecord(std::vector<std::string_view>&& fields, std::vector<std::string>&& headers = {});
+namespace csv {
 
-    CsvRecord(const CsvRecord&) = default;
-    CsvRecord(CsvRecord&&) noexcept = default;
-    CsvRecord& operator=(const CsvRecord&) = default;
-    CsvRecord& operator=(CsvRecord&&) noexcept = default;
+class Record {
+public:
+    Record()=default;
+    explicit Record(const std::vector<std::string>& fields, const std::vector<std::string>& headers = {});
+    explicit Record(std::vector<std::string>&& fields, std::vector<std::string>&& headers = {});
+    explicit Record(const std::vector<std::string_view>& fields, const std::vector<std::string_view>& headers = {});
+    explicit Record(std::vector<std::string_view>&& fields, std::vector<std::string>&& headers = {});
+
+    Record(const Record&) = default;
+    Record(Record&&) noexcept = default;
+    Record& operator=(const Record&) = default;
+    Record& operator=(Record&&) noexcept = default;
 
     template<typename T = std::string>
     std::optional<T> get(const size_t index) const;
@@ -41,5 +43,7 @@ private:
     std::vector<std::string> headers_;
 };
 
-// TODO: separate class for CsvRecord with only std::string_view
-using CsvRecordView = CsvRecord;
+// TODO: separate class for Record with only std::string_view
+using RecordView = Record;
+
+}

@@ -6,13 +6,15 @@
 #include <cstddef>
 #include <string_view>
 
+namespace csv {
+
 constexpr size_t DEFAULT_CAPACITY = 65536; // 64 KB chunk
 
 // circular buffer - we can reread whole buffer or first K bytes
 template <size_t N = DEFAULT_CAPACITY>
-class CsvBuffer {
+class Buffer {
     public:
-        explicit CsvBuffer(const std::string_view filename)
+        explicit Buffer(const std::string_view filename)
             : stream_(std::make_unique<std::ifstream>(std::string(filename), std::ios::binary))
             , data_(std::make_unique<char[]>(N))
         {
@@ -22,7 +24,7 @@ class CsvBuffer {
         }
 
         // for testing
-        explicit CsvBuffer(std::unique_ptr<std::istream> stream)
+        explicit Buffer(std::unique_ptr<std::istream> stream)
             : stream_(std::move(stream))
             , data_(std::make_unique<char[]>(N)) {}
 
@@ -125,3 +127,8 @@ class CsvBuffer {
         size_t start_ = 0;
         const size_t capacity_ = N;
 };
+
+class BufferView {
+};
+
+}

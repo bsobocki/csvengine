@@ -1,6 +1,8 @@
 #pragma once
 
-struct CsvConfig {
+namespace csv {
+
+struct Config {
     char delimiter = ',';
     bool has_header = true;
     
@@ -24,3 +26,5 @@ struct CsvConfig {
         }
     }
 };
+
+}

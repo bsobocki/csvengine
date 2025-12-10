@@ -7,34 +7,37 @@
 #include <memory>
 #include <iterator>
 #include <optional>
+#include <functional>
+
 #include <csvconfig.hpp>
 #include <csvrecord.hpp>
 #include <csvbuffer.hpp>
-#include <functional>
+
+namespace csv {
 
 template<typename Func>
-concept CsvRecordViewBoolCallback = 
-    std::invocable<Func, const CsvRecordView&> &&
-    std::convertible_to<std::invoke_result_t<Func, const CsvRecordView&>, bool> &&
-    (!std::same_as<std::invoke_result_t<Func, const CsvRecordView&>, void>);
+concept RecordViewBoolCallback = 
+    std::invocable<Func, const RecordView&> &&
+    std::convertible_to<std::invoke_result_t<Func, const RecordView&>, bool> &&
+    (!std::same_as<std::invoke_result_t<Func, const RecordView&>, void>);
 
 template<typename Func>
-concept CsvRecordViewVoidCallback = 
-    std::invocable<Func, const CsvRecordView&> &&
-    std::same_as<std::invoke_result_t<Func, const CsvRecordView&>, void>;
+concept RecordViewVoidCallback = 
+    std::invocable<Func, const RecordView&> &&
+    std::same_as<std::invoke_result_t<Func, const RecordView&>, void>;
 
-class CsvReader {
+class Reader {
 public:
     // Construction & Configuration
-    explicit CsvReader(const std::string& filePath, const CsvConfig = {});
-    explicit CsvReader(std::unique_ptr<std::istream> stream, const CsvConfig = {});
+    explicit Reader(const std::string& filePath, const Config = {});
+    explicit Reader(std::unique_ptr<std::istream> stream, const Config = {});
 
     // No copy (owns file handle)
-    CsvReader(const CsvReader&) = delete;
-    CsvReader& operator=(const CsvReader&) = delete;
+    Reader(const Reader&) = delete;
+    Reader& operator=(const Reader&) = delete;
     // Move-only
-    CsvReader(CsvReader&&) noexcept = default;
-    CsvReader& operator=(CsvReader&&) noexcept = default;
+    Reader(Reader&&) noexcept = default;
+    Reader& operator=(Reader&&) noexcept = default;
 
     bool good() const;
     bool has_header() const;
@@ -42,47 +45,49 @@ public:
     explicit operator bool() const; // return good()
 
     // getters
-    CsvConfig config() const;
-    const CsvRecord& current_record() const;
+    Config config() const;
+    const Record& current_record() const;
     bool read_next_record();
     const std::vector<std::string>& headers() const;
 
-    template<CsvRecordViewBoolCallback Func>
+    template<RecordViewBoolCallback Func>
     void for_each(Func&& iteration);
 
-    template<CsvRecordViewVoidCallback Func>
+    template<RecordViewVoidCallback Func>
     void for_each(Func&& iteration);
 
-    class CsvIterator {
+    class Iterator {
         public:
             // Iterator Traits (Required for STL compatibility)
             using iterator_category = std::input_iterator_tag;
-            using value_type        = CsvRecord;
+            using value_type        = Record;
             using difference_type   = std::ptrdiff_t;
-            using pointer           = const CsvRecord*;
-            using reference         = const CsvRecord&;
+            using pointer           = const Record*;
+            using reference         = const Record&;
 
-            explicit CsvIterator(CsvReader* reader);
-            CsvIterator& operator++();
-            const CsvRecord& operator*() const;
-            bool operator!=(const CsvIterator& other) const;
+            explicit Iterator(Reader* reader);
+            Iterator& operator++();
+            const Record& operator*() const;
+            bool operator!=(const Iterator& other) const;
         
         private:
-            CsvReader* reader_;
+            Reader* reader_;
     };
-    CsvIterator begin();
-    CsvIterator end();
+    Iterator begin();
+    Iterator end();
 
 private:
     void read_headers();
 
-    friend class CsvIterator;
+    friend class Iterator;
 
-    CsvRecord current_record_;
+    Record current_record_;
     long long current_record_idx_ = -1;
 
     std::string csv_file_path_;
-    CsvBuffer<> buffer_;
-    const CsvConfig config_;
+    Buffer<> buffer_;
+    const Config config_;
     std::vector<std::string> headers_;
 };
+
+}

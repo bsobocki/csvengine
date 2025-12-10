@@ -2,6 +2,8 @@
 #include <csvbuffer.hpp>
 #include <testdata.hpp>
 
+using namespace csv;
+
 constexpr size_t expected_no_data = 0;
 
 void verify_buffer_chunk(auto& buffer, const char* expected_start, size_t expected_size) {
@@ -28,11 +30,11 @@ void verify_eof(auto& buffer) {
     EXPECT_TRUE(buffer.eof());
 }
 
-TEST(CsvBufferTest, DefaultBuffer64KB_ReadSimpleFile) {
-    using CsvBuffer64KB = CsvBuffer<>;
+TEST(BufferTest, DefaultBuffer64KB_ReadSimpleFile) {
+    using Buffer64KB = Buffer<>;
 
     constexpr size_t expected_read_data_size = 137;
-    CsvBuffer64KB buffer(std::make_unique<std::istringstream>(simple_csv_data));
+    Buffer64KB buffer(std::make_unique<std::istringstream>(simple_csv_data));
 
     // read 137 bytes
     verify_buffer_chunk(buffer, simple_csv_data.data(), expected_read_data_size);
@@ -41,10 +43,10 @@ TEST(CsvBufferTest, DefaultBuffer64KB_ReadSimpleFile) {
     verify_eof(buffer);
 }
 
-TEST(CsvBufferTest, Buffer40B_ReadSimpleFile_SeveralChunksUntilEof) {
-    using CsvBuffer40B = CsvBuffer<40>;
+TEST(BufferTest, Buffer40B_ReadSimpleFile_SeveralChunksUntilEof) {
+    using Buffer40B = Buffer<40>;
 
-    CsvBuffer40B buffer(std::make_unique<std::istringstream>(simple_csv_data));
+    Buffer40B buffer(std::make_unique<std::istringstream>(simple_csv_data));
 
     EXPECT_TRUE(buffer.good());
 
@@ -64,23 +66,23 @@ TEST(CsvBufferTest, Buffer40B_ReadSimpleFile_SeveralChunksUntilEof) {
     verify_eof(buffer);
 }
 
-TEST(CsvBufferTest, DefaultBuffer64KB_ReadEmptyFile) {
-    using CsvBuffer64KB = CsvBuffer<>;
+TEST(BufferTest, DefaultBuffer64KB_ReadEmptyFile) {
+    using Buffer64KB = Buffer<>;
 
-    CsvBuffer64KB buffer(std::make_unique<std::istringstream>(""));
+    Buffer64KB buffer(std::make_unique<std::istringstream>(""));
 
-    EXPECT_EQ(buffer.read_data(), CsvBuffer64KB::ReadingResult::eof);
+    EXPECT_EQ(buffer.read_data(), Buffer64KB::ReadingResult::eof);
     EXPECT_EQ(buffer.available_data_size(), expected_no_data);
     EXPECT_EQ(buffer.peek(), std::string_view());
 }
 
-TEST(CsvBufferTest, DefaultBuffer64KB_ReadFile_OneUnfilledChunkOnly) {
-    using CsvBuffer64KB = CsvBuffer<>;
+TEST(BufferTest, DefaultBuffer64KB_ReadFile_OneUnfilledChunkOnly) {
+    using Buffer64KB = Buffer<>;
     const std::string data = "AAAAAA";
 
-    CsvBuffer64KB buffer(std::make_unique<std::istringstream>(data));
+    Buffer64KB buffer(std::make_unique<std::istringstream>(data));
 
-    EXPECT_EQ(buffer.read_data(), CsvBuffer64KB::ReadingResult::ok);
+    EXPECT_EQ(buffer.read_data(), Buffer64KB::ReadingResult::ok);
     EXPECT_EQ(buffer.available_data_size(), data.size());
     EXPECT_EQ(buffer.peek(), std::string_view(data));
     EXPECT_EQ(buffer.peek(2), std::string_view(data.data(), 2));
@@ -89,13 +91,13 @@ TEST(CsvBufferTest, DefaultBuffer64KB_ReadFile_OneUnfilledChunkOnly) {
     EXPECT_EQ(buffer.consume_available_bytes(), std::string_view(data.data()+2));
     EXPECT_EQ(buffer.available_data_size(), expected_no_data);
     
-    EXPECT_EQ(buffer.read_data(), CsvBuffer64KB::ReadingResult::eof);
+    EXPECT_EQ(buffer.read_data(), Buffer64KB::ReadingResult::eof);
     EXPECT_EQ(buffer.available_data_size(), expected_no_data);
     EXPECT_EQ(buffer.peek(), std::string_view());
 }
 
-TEST(CsvBufferTest, Buffer64B_PeekDoesNotConsume) {
-    CsvBuffer<64> buffer(std::make_unique<std::istringstream>("test"));
+TEST(BufferTest, Buffer64B_PeekDoesNotConsume) {
+    Buffer<64> buffer(std::make_unique<std::istringstream>("test"));
     buffer.read_data();
     
     auto data1 = buffer.peek();
@@ -105,16 +107,16 @@ TEST(CsvBufferTest, Buffer64B_PeekDoesNotConsume) {
     EXPECT_EQ(buffer.available_data_size(), 4);
 }
 
-TEST(CsvBufferTest, Buffer64B_ShiftMoreThanAvailable) {
-    CsvBuffer<64> buffer(std::make_unique<std::istringstream>("ABC"));
+TEST(BufferTest, Buffer64B_ShiftMoreThanAvailable) {
+    Buffer<64> buffer(std::make_unique<std::istringstream>("ABC"));
     buffer.read_data();
     
     buffer.shift(100);
     EXPECT_EQ(buffer.available_data_size(), 0);
 }
 
-TEST(CsvBufferTest, Buffer64B_PartialShift) {
-    CsvBuffer<64> buffer(std::make_unique<std::istringstream>("ABCDEF"));
+TEST(BufferTest, Buffer64B_PartialShift) {
+    Buffer<64> buffer(std::make_unique<std::istringstream>("ABCDEF"));
     buffer.read_data();
     
     buffer.shift(3);
@@ -124,10 +126,10 @@ TEST(CsvBufferTest, Buffer64B_PartialShift) {
     EXPECT_EQ(buffer.peek(), "F");
 }
 
-TEST(CsvBufferTest, Buffer64B_PartialConsume) {
-    CsvBuffer<64> buffer(std::make_unique<std::istringstream>("ABCDEF"));
+TEST(BufferTest, Buffer64B_PartialConsume) {
+    Buffer<64> buffer(std::make_unique<std::istringstream>("ABCDEF"));
 
-    EXPECT_EQ(buffer.read_data(), CsvBuffer<64>::ReadingResult::ok);
+    EXPECT_EQ(buffer.read_data(), Buffer<64>::ReadingResult::ok);
     EXPECT_EQ(buffer.available_data_size(), 6);
 
     EXPECT_EQ(buffer.consume_bytes(3), "ABC");
@@ -139,10 +141,10 @@ TEST(CsvBufferTest, Buffer64B_PartialConsume) {
     EXPECT_EQ(buffer.available_data_size(), expected_no_data);
 }
 
-TEST(CsvBufferTest, DefaultBuffer64KB_ConsumeAllAndReset) {
+TEST(BufferTest, DefaultBuffer64KB_ConsumeAllAndReset) {
     auto data = "ABCDEF";
     constexpr size_t data_size = 6;
-    CsvBuffer<> buffer(std::make_unique<std::istringstream>(data));
+    Buffer<> buffer(std::make_unique<std::istringstream>(data));
 
     verify_buffer_chunk(buffer, data, data_size);
     buffer.reset();
