@@ -25,6 +25,9 @@ public:
     void reset();
 
 private:
+    ParseStatus naive_parse(std::string_view buffer);
+    ParseStatus csv_quotes_parse(std::string_view buffer);
+
     CsvConfig config_;
     bool in_quotes_ = false;
     std::vector<std::string_view> fields_ = {};

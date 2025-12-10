@@ -25,6 +25,14 @@ CsvParser::CsvParser(CsvConfig config): config_(config) {
 }
 
 CsvParser::ParseStatus CsvParser::parse(std::string_view buffer) {
+    return naive_parse(buffer);
+}
+
+CsvParser::ParseStatus CsvParser::csv_quotes_parse(std::string_view buffer) {
+
+}
+
+CsvParser::ParseStatus CsvParser::naive_parse(std::string_view buffer) {
     // TODO: implement parsing with quotes
 
     // naive implementation without quotes
