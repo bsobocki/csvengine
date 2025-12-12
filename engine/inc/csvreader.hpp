@@ -48,7 +48,7 @@ public:
     // getters
     Config config() const;
     const Record& current_record() const;
-    bool next();
+    [[nodiscard]] bool next();
     const std::vector<std::string>& headers() const;
 
     template<RecordViewBoolCallback Func>

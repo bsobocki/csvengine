@@ -34,7 +34,7 @@ void Reader::read_headers() {
     headers_ = std::vector<std::string>(headers_view.begin(), headers_view.end());
 }
 
-[[nodiscard]] bool Reader::next() {
+bool Reader::next() {
     parser_.reset();
 
     while (true) {
