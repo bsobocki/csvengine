@@ -41,22 +41,43 @@ Parser::ParseStatus Parser::naive_parse(std::string_view buffer) {
     auto newline_pos = buffer.find('\n');
 
     if (newline_pos == std::string_view::npos) {
-        if (buffer.empty()) return Parser::ParseStatus::need_more_data;
-
-        for (auto& field: split(buffer, config_.delimiter))
-            fields_.push_back(field);
-        return Parser::ParseStatus::record;
+        if (buffer.empty()) {
+            is_last_field_not_full_ = true;
+            return Parser::ParseStatus::need_more_data;
+        }
+        else {
+            auto fields = split(buffer, config_.delimiter);
+            insert_fields(fields);
+            consumed_ += buffer.size();
+        }
+        
+        return Parser::ParseStatus::need_more_data;
     }
 
     auto line = buffer.substr(0, newline_pos);
 
     if (line.empty()) {
-        return Parser::ParseStatus::record;
+        return Parser::ParseStatus::complete;
     }
 
-    for (auto& field: split(line, config_.delimiter))
-        fields_.push_back(field);
-    return Parser::ParseStatus::record;
+    auto fields = split(line, config_.delimiter);
+    insert_fields(fields);
+
+    consumed_ += line.size();
+
+    return Parser::ParseStatus::complete;
+}
+
+void Parser::insert_fields(const std::vector<std::string_view>& fields) {
+    auto field = fields.begin();
+    if (is_last_field_not_full_) {
+        fields_[fields_.size()-1] += *field++;
+        is_last_field_not_full_ = false;
+    }
+
+    while(field != fields.end()) {
+        fields_.emplace_back(*field++);
+    }
 }
 
 void Parser::reset() {
@@ -75,10 +96,6 @@ std::string Parser::err_msg() const {
     return err_msg_;
 }
 
-std::vector<std::string_view> Parser::fields() const {
-    return fields_;
-}
-
-std::vector<std::string> Parser::fields_copy() const {
-    return std::vector<std::string>(fields_.begin(), fields_.end());
+std::vector<std::string> Parser::move_fields() const {
+    return std::move(fields_);
 }

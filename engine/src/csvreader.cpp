@@ -7,7 +7,7 @@ using namespace csv;
 using namespace std;
 
 Reader::Reader(const std::string& filepath, const Config config)
-    : csv_file_path_(filepath), buffer_(filepath), config_(config) {
+    : csv_file_path_(filepath), buffer_(filepath), config_(config), parser_(config_) {
 
     if (!buffer_.good())
         throw std::runtime_error("Reader: cannot open " + filepath);
@@ -18,7 +18,7 @@ Reader::Reader(const std::string& filepath, const Config config)
 }
 
 Reader::Reader(std::unique_ptr<std::istream> stream, const Config config)
-    : buffer_(std::move(stream)), config_(config) {
+    : buffer_(std::move(stream)), config_(config), parser_(config_) {
         
     if (!buffer_.good())
         throw std::runtime_error("Reader: cannot deal with stream ");
@@ -29,46 +29,49 @@ Reader::Reader(std::unique_ptr<std::istream> stream, const Config config)
 }
 
 void Reader::read_headers() {
-    if (!read_next_record()) throw std::runtime_error("Cannot read headers!");
+    if (!next()) throw std::runtime_error("Cannot read headers!");
     auto headers_view = current_record().fields();
     headers_ = std::vector<std::string>(headers_view.begin(), headers_view.end());
 }
 
-bool Reader::read_next_record() {
-    if (buffer_.eof() || !buffer_.good()) return false;
-
-    Parser parser(config_);
-
-    std::string mem;
+[[nodiscard]] bool Reader::next() {
+    parser_.reset();
 
     while (true) {
-        auto available = buffer_.available();
-        if (available == 0) {
-            if (buffer_.refill() != Buffer<>::ReadingResult::ok) {
+        if (buffer_.empty()) {
+            auto refill_result = buffer_.refill();
+
+            if (refill_result == Buffer<>::ReadingResult::eof) {
+                auto fields = parser_.move_fields();
+
+                if (!fields.empty()) {
+                    current_record_ = Record(std::move(fields));
+                    return true;
+                }
+
+                return false;
+            }
+
+            if (refill_result != Buffer<>::ReadingResult::ok) {
                 return false;
             }
         }
 
-        auto buffer_data = buffer_.view();
-        auto result = parser.parse(buffer_data);
-        buffer_.consume(parser.consumed());
+        auto data = buffer_.view();
+        auto result = parser_.parse(data);
+        buffer_.consume(parser_.consumed());
 
-        switch(result) {
-            case Parser::ParseStatus::record:
-                current_record_ = Record(parser.fields());
-                return true;
+        if (result == Parser::ParseStatus::complete) {
+            current_record_ = Record(parser_.move_fields());
+            return true;
+        }
 
-            case Parser::ParseStatus::need_more_data:
-                if (buffer_.refill() != Buffer<>::ReadingResult::ok)
-                    return false;
-
-                break;
-            
-            case Parser::ParseStatus::fail:
-                return false;
+        if (result == Parser::ParseStatus::fail) {
+            break;
         }
     }
-    return true;
+
+    return false; // on Parser::ParseStatus::fail
 }
 
 Reader::Iterator::Iterator(Reader* reader): reader_(reader) {
@@ -78,7 +81,7 @@ Reader::Iterator::Iterator(Reader* reader): reader_(reader) {
 }
 
 Reader::Iterator& Reader::Iterator::operator++() {
-    if (reader_ && !reader_->read_next_record())
+    if (reader_ && !reader_->next())
         reader_ = nullptr;
 
     return *this;

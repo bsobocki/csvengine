@@ -12,6 +12,7 @@
 #include <csvconfig.hpp>
 #include <csvrecord.hpp>
 #include <csvbuffer.hpp>
+#include <csvparser.hpp>
 
 namespace csv {
 
@@ -47,7 +48,7 @@ public:
     // getters
     Config config() const;
     const Record& current_record() const;
-    bool read_next_record();
+    bool next();
     const std::vector<std::string>& headers() const;
 
     template<RecordViewBoolCallback Func>
@@ -87,6 +88,7 @@ private:
     std::string csv_file_path_;
     Buffer<> buffer_;
     const Config config_;
+    Parser parser_;
     std::vector<std::string> headers_;
 };
 

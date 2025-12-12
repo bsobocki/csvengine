@@ -10,30 +10,30 @@ namespace csv {
 
 class Parser {
 public:
-    enum class ParseStatus {record, need_more_data, fail};
+    enum class ParseStatus {complete, need_more_data, fail};
 
     explicit Parser(Config config);
 
-    // function parse doesn't reset the parser state
+    /// @brief function parse doesn't reset the parser state
     ParseStatus parse(std::string_view buffer);
 
     size_t consumed() const;
 
     std::string err_msg() const;
 
-    std::vector<std::string_view> fields() const;
-    std::vector<std::string> fields_copy() const;
+    std::vector<std::string> move_fields() const;
 
-    // reset parser state
     void reset();
 
 private:
     ParseStatus naive_parse(std::string_view buffer);
     ParseStatus csv_quotes_parse(std::string_view buffer);
+    void insert_fields(const std::vector<std::string_view>& fields);
 
     Config config_;
     bool in_quotes_ = false;
-    std::vector<std::string_view> fields_ = {};
+    bool is_last_field_not_full_ = false;
+    std::vector<std::string> fields_ = {};
     size_t field_start_ = 0;
     size_t consumed_ = 0;
     std::string err_msg_ = "";
