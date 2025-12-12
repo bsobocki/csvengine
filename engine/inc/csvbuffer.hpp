@@ -5,16 +5,17 @@
 #include <fstream>
 #include <cstddef>
 #include <string_view>
+#include <cstring>
+#include <stdexcept>
 
 namespace csv {
 
 constexpr size_t DEFAULT_CAPACITY = 65536; // 64 KB chunk
 
-// circular buffer - we can reread whole buffer or first K bytes
 template <size_t N = DEFAULT_CAPACITY>
 class Buffer {
     public:
-        explicit Buffer(const std::string_view filename)
+        explicit Buffer(std::string_view filename)
             : stream_(std::make_unique<std::ifstream>(std::string(filename), std::ios::binary))
             , data_(std::make_unique<char[]>(N))
         {
@@ -28,89 +29,56 @@ class Buffer {
             : stream_(std::move(stream))
             , data_(std::make_unique<char[]>(N)) {}
 
-        enum class ReadingResult {ok, eof, fail};
+        Buffer(const Buffer&) = delete;
+        Buffer& operator=(const Buffer&) = delete;
 
-        // overwrite only first bytes of the buffer with new data
-        ReadingResult read_first_bytes_of_data(size_t bytes) {
-            bytes = std::min(bytes, capacity_);
+        Buffer(Buffer&&) noexcept = default;
+        Buffer& operator=(Buffer&&) noexcept = default;
 
-            stream_->read(data_.get(), bytes);
+        enum class ReadingResult {ok, eof, buffer_full, fail};
 
-            size_ = stream_->gcount();
-            start_ = 0;
+        ReadingResult refill() {
+            compact();
 
-            if (size_ == 0)
+            size_t space = free_space();
+            if (space == 0) {
+                return ReadingResult::buffer_full;
+            }
+
+            stream_->read(data_.get() + size_, space);
+
+            auto bytes_read = stream_->gcount();
+
+            if (bytes_read == 0)
                 return stream_->eof() ? ReadingResult::eof : ReadingResult::fail;
+
+            size_ += bytes_read;
 
             return ReadingResult::ok;
         }
 
-        // overwrite whole buffer with new data
-        ReadingResult read_data() {
-            return read_first_bytes_of_data(capacity_);
+        std::string_view view() const {
+            return  {data_.get() + start_, available()};
         }
 
-        size_t available_data_size() const {
+        void consume(size_t bytes) {
+            start_ += std::min(bytes, available());
+        }
+
+        size_t available() const {
             return size_ - start_;
         }
 
-        size_t consumed_data_size() const {
-            return start_;
-        }
-
-        // for reading char-by-char -- compiler cannot optimize it like range-based for loop on std::string_view
-        // so it can be slower than returning chunk-by-chunk and make range-based for loop on chunks
-        bool next_char(char& c) {
-            if (available_data_size() > 0) {
-                c = data_[start_++];
-                return true;
-            }
-            return false;
-        }
-
-        // for range-based for loop on available data
-        std::string_view consume_bytes(size_t bytes) {
-            size_t available = std::min(bytes, available_data_size());
-            if (available > 0) {
-                auto result = std::string_view(&data_[start_], available);
-                start_ += available;
-                return result;
-            }
-            return {};
-        }
-
-        // for range-based for loop on available data
-        std::string_view consume_available_bytes() {
-            return consume_bytes(available_data_size());
-        }
-
-        void shift(const size_t bytes) {
-            start_ = std::min(start_ + bytes, size_);
-        }
-
-        void shift() {
-            start_ = size_;
-        }
-
-        std::string_view peek(const size_t bytes) const {
-            auto available = std::min(available_data_size(), bytes);
-            return std::string_view(&data_[start_], available);
-        }
-
-        std::string_view peek() const {
-            return  std::string_view(&data_[start_], available_data_size());
-        }
-
-        size_t position() const {
-            return start_;
+        bool empty() const {
+            return start_ == size_;
         }
 
         bool eof() const {
-            return available_data_size() == 0 && stream_->eof();
+            return available() == 0 && stream_->eof();
         }
 
         bool good() const {
-            return stream_->good();
+            return stream_->good() || !empty();
         }
 
         void reset() {
@@ -121,14 +89,26 @@ class Buffer {
         }
 
     private:
+        void compact() {
+            size_t leftover = available();
+
+            // move leftover data to the beggining
+            if (leftover && start_) {
+                std::memmove(data_.get(), data_.get() + start_, leftover);
+            }
+
+            start_ = 0;
+            size_ = leftover;
+        }
+
+        size_t free_space() const {
+            return N - size_;
+        }
+
         std::unique_ptr<std::istream> stream_;
         std::unique_ptr<char[]> data_;
-        size_t size_ = 0;
         size_t start_ = 0;
-        const size_t capacity_ = N;
-};
-
-class BufferView {
+        size_t size_ = 0;
 };
 
 }

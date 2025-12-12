@@ -10,7 +10,7 @@ namespace csv {
 
 class Parser {
 public:
-    enum class ParseStatus {record, eob, fail};
+    enum class ParseStatus {record, need_more_data, fail};
 
     explicit Parser(Config config);
 

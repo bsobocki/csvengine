@@ -32,6 +32,8 @@ Parser::ParseStatus Parser::parse(std::string_view buffer) {
 
 Parser::ParseStatus Parser::csv_quotes_parse(std::string_view buffer) {
     // TODO: implement parsing with quotes
+    (void)buffer;
+    return Parser::ParseStatus::fail;
 }
 
 Parser::ParseStatus Parser::naive_parse(std::string_view buffer) {
@@ -39,7 +41,7 @@ Parser::ParseStatus Parser::naive_parse(std::string_view buffer) {
     auto newline_pos = buffer.find('\n');
 
     if (newline_pos == std::string_view::npos) {
-        if (buffer.empty()) return Parser::ParseStatus::eob;
+        if (buffer.empty()) return Parser::ParseStatus::need_more_data;
 
         for (auto& field: split(buffer, config_.delimiter))
             fields_.push_back(field);

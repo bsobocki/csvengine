@@ -11,33 +11,32 @@ void verify_buffer_chunk(auto& buffer, const char* expected_start, size_t expect
 
     EXPECT_TRUE(buffer.good());
 
-    EXPECT_EQ(buffer.read_data(), BufferType::ReadingResult::ok);
-    EXPECT_EQ(buffer.available_data_size(), expected_size);
+    EXPECT_EQ(buffer.refill(), BufferType::ReadingResult::ok);
+    EXPECT_EQ(buffer.available(), expected_size);
 
     auto expected_data = std::string_view(expected_start, expected_size);
-    EXPECT_EQ(buffer.peek(), expected_data);
-    EXPECT_EQ(buffer.available_data_size(), expected_size);
-    EXPECT_EQ(buffer.consume_available_bytes(), expected_data);
+    EXPECT_EQ(buffer.view(), expected_data);
+    EXPECT_EQ(buffer.available(), expected_size);
+    buffer.consume(buffer.available());
 
-    EXPECT_EQ(buffer.available_data_size(), expected_no_data);
-    EXPECT_EQ(buffer.peek(), std::string_view());
-    EXPECT_EQ(buffer.consume_available_bytes(), std::string_view());
+    EXPECT_EQ(buffer.available(), expected_no_data);
+    EXPECT_EQ(buffer.view(), std::string_view());
 }
 
 void verify_eof(auto& buffer) {
     using BufferType = std::remove_reference_t<decltype(buffer)>;
-    EXPECT_EQ(buffer.read_data(), BufferType::ReadingResult::eof);
+    EXPECT_EQ(buffer.refill(), BufferType::ReadingResult::eof);
     EXPECT_TRUE(buffer.eof());
 }
 
 TEST(BufferTest, DefaultBuffer64KB_ReadSimpleFile) {
     using Buffer64KB = Buffer<>;
 
-    constexpr size_t expected_read_data_size = 137;
+    constexpr size_t expected_refill_size = 137;
     Buffer64KB buffer(std::make_unique<std::istringstream>(simple_csv_data));
 
     // read 137 bytes
-    verify_buffer_chunk(buffer, simple_csv_data.data(), expected_read_data_size);
+    verify_buffer_chunk(buffer, simple_csv_data.data(), expected_refill_size);
 
     // hit eof
     verify_eof(buffer);
@@ -71,9 +70,9 @@ TEST(BufferTest, DefaultBuffer64KB_ReadEmptyFile) {
 
     Buffer64KB buffer(std::make_unique<std::istringstream>(""));
 
-    EXPECT_EQ(buffer.read_data(), Buffer64KB::ReadingResult::eof);
-    EXPECT_EQ(buffer.available_data_size(), expected_no_data);
-    EXPECT_EQ(buffer.peek(), std::string_view());
+    EXPECT_EQ(buffer.refill(), Buffer64KB::ReadingResult::eof);
+    EXPECT_EQ(buffer.available(), expected_no_data);
+    EXPECT_EQ(buffer.view(), std::string_view());
 }
 
 TEST(BufferTest, DefaultBuffer64KB_ReadFile_OneUnfilledChunkOnly) {
@@ -82,63 +81,62 @@ TEST(BufferTest, DefaultBuffer64KB_ReadFile_OneUnfilledChunkOnly) {
 
     Buffer64KB buffer(std::make_unique<std::istringstream>(data));
 
-    EXPECT_EQ(buffer.read_data(), Buffer64KB::ReadingResult::ok);
-    EXPECT_EQ(buffer.available_data_size(), data.size());
-    EXPECT_EQ(buffer.peek(), std::string_view(data));
-    EXPECT_EQ(buffer.peek(2), std::string_view(data.data(), 2));
+    EXPECT_EQ(buffer.refill(), Buffer64KB::ReadingResult::ok);
+    EXPECT_EQ(buffer.available(), data.size());
+    EXPECT_EQ(buffer.view(), std::string_view(data));
 
-    buffer.shift(2);
-    EXPECT_EQ(buffer.consume_available_bytes(), std::string_view(data.data()+2));
-    EXPECT_EQ(buffer.available_data_size(), expected_no_data);
+    buffer.consume(2);
+    EXPECT_EQ(buffer.view(), std::string_view(data.data()+2));
+    EXPECT_EQ(buffer.available(), data.size()-2);
     
-    EXPECT_EQ(buffer.read_data(), Buffer64KB::ReadingResult::eof);
-    EXPECT_EQ(buffer.available_data_size(), expected_no_data);
-    EXPECT_EQ(buffer.peek(), std::string_view());
+    EXPECT_EQ(buffer.refill(), Buffer64KB::ReadingResult::eof);
+    EXPECT_EQ(buffer.available(), data.size()-2);
+    EXPECT_EQ(buffer.view(), std::string_view(data.data()+2));
 }
 
-TEST(BufferTest, Buffer64B_PeekDoesNotConsume) {
+TEST(BufferTest, Buffer64B_viewDoesNotConsume) {
     Buffer<64> buffer(std::make_unique<std::istringstream>("test"));
-    buffer.read_data();
+    buffer.refill();
     
-    auto data1 = buffer.peek();
-    auto data2 = buffer.peek();
+    auto data1 = buffer.view();
+    auto data2 = buffer.view();
     
     EXPECT_EQ(data1, data2);
-    EXPECT_EQ(buffer.available_data_size(), 4);
+    EXPECT_EQ(buffer.available(), 4);
 }
 
-TEST(BufferTest, Buffer64B_ShiftMoreThanAvailable) {
+TEST(BufferTest, Buffer64B_consumeMoreThanAvailable) {
     Buffer<64> buffer(std::make_unique<std::istringstream>("ABC"));
-    buffer.read_data();
+    buffer.refill();
     
-    buffer.shift(100);
-    EXPECT_EQ(buffer.available_data_size(), 0);
+    buffer.consume(100);
+    EXPECT_EQ(buffer.available(), 0);
 }
 
-TEST(BufferTest, Buffer64B_PartialShift) {
+TEST(BufferTest, Buffer64B_Partialconsume) {
     Buffer<64> buffer(std::make_unique<std::istringstream>("ABCDEF"));
-    buffer.read_data();
+    buffer.refill();
     
-    buffer.shift(3);
-    EXPECT_EQ(buffer.peek(), "DEF");
+    buffer.consume(3);
+    EXPECT_EQ(buffer.view(), "DEF");
     
-    buffer.shift(2);
-    EXPECT_EQ(buffer.peek(), "F");
+    buffer.consume(2);
+    EXPECT_EQ(buffer.view(), "F");
 }
 
 TEST(BufferTest, Buffer64B_PartialConsume) {
     Buffer<64> buffer(std::make_unique<std::istringstream>("ABCDEF"));
 
-    EXPECT_EQ(buffer.read_data(), Buffer<64>::ReadingResult::ok);
-    EXPECT_EQ(buffer.available_data_size(), 6);
+    EXPECT_EQ(buffer.refill(), Buffer<64>::ReadingResult::ok);
+    EXPECT_EQ(buffer.available(), 6);
 
-    EXPECT_EQ(buffer.consume_bytes(3), "ABC");
-    EXPECT_EQ(buffer.available_data_size(), 3);
+    buffer.consume(3);
+    EXPECT_EQ(buffer.available(), 3);
 
-    EXPECT_EQ(buffer.peek(), "DEF");
+    EXPECT_EQ(buffer.view(), "DEF");
 
-    EXPECT_EQ(buffer.consume_bytes(3), "DEF");
-    EXPECT_EQ(buffer.available_data_size(), expected_no_data);
+    buffer.consume(3);
+    EXPECT_EQ(buffer.available(), expected_no_data);
 }
 
 TEST(BufferTest, DefaultBuffer64KB_ConsumeAllAndReset) {
