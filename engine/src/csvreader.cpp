@@ -7,9 +7,12 @@ using namespace csv;
 using namespace std;
 
 Reader::Reader(const std::string& filepath, const Config config)
-    : csv_file_path_(filepath), buffer_(filepath), config_(config), parser_(config_) {
-
-    if (!buffer_.good())
+    : csv_file_path_(filepath)
+    , buffer_(std::make_unique<Buffer<>>(filepath))
+    , config_(config)
+    , parser_(config_)
+{
+    if (!buffer_->good())
         throw std::runtime_error("Reader: cannot open " + filepath);
 
     if (config_.has_header) {
@@ -18,10 +21,25 @@ Reader::Reader(const std::string& filepath, const Config config)
 }
 
 Reader::Reader(std::unique_ptr<std::istream> stream, const Config config)
-    : buffer_(std::move(stream)), config_(config), parser_(config_) {
-        
-    if (!buffer_.good())
+    : buffer_(std::make_unique<Buffer<>>(std::move(stream)))
+    , config_(config)
+    , parser_(config_)
+{
+    if (!buffer_->good())
         throw std::runtime_error("Reader: cannot deal with stream ");
+
+    if (config_.has_header) {
+        read_headers();
+    }
+}
+
+Reader::Reader(std::unique_ptr<IBuffer> buffer, const Config config)
+    : buffer_(std::move(buffer))
+    , config_(config)
+    , parser_(config_)
+{
+    if (!buffer_->good())
+        throw std::runtime_error("Reader: cannot deal with buffer ");
 
     if (config_.has_header) {
         read_headers();
@@ -38,8 +56,8 @@ bool Reader::next() {
     parser_.reset();
 
     while (true) {
-        if (buffer_.empty()) {
-            auto refill_result = buffer_.refill();
+        if (buffer_->empty()) {
+            auto refill_result = buffer_->refill();
 
             if (refill_result == ReadingResult::eof) {
                 auto fields = parser_.move_fields();
@@ -57,9 +75,9 @@ bool Reader::next() {
             }
         }
 
-        auto data = buffer_.view();
+        auto data = buffer_->view();
         auto result = parser_.parse(data);
-        buffer_.consume(parser_.consumed());
+        buffer_->consume(parser_.consumed());
 
         if (result == Parser::ParseStatus::complete) {
             current_record_ = Record(parser_.move_fields());
@@ -104,7 +122,7 @@ Reader::Iterator Reader::end() {
 }
 
 bool Reader::good() const {
-    return buffer_.good();
+    return buffer_->good();
 }
 
 bool Reader::has_header() const {

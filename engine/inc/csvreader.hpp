@@ -32,6 +32,7 @@ public:
     // Construction & Configuration
     explicit Reader(const std::string& filePath, const Config = {});
     explicit Reader(std::unique_ptr<std::istream> stream, const Config = {});
+    explicit Reader(std::unique_ptr<IBuffer> buffer, const Config = {});
 
     // No copy (owns file handle)
     Reader(const Reader&) = delete;
@@ -86,7 +87,7 @@ private:
     long long current_record_idx_ = -1;
 
     std::string csv_file_path_;
-    Buffer<> buffer_;
+    std::unique_ptr<IBuffer> buffer_;
     const Config config_;
     Parser parser_;
     std::vector<std::string> headers_;
