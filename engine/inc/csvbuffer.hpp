@@ -10,10 +10,26 @@
 
 namespace csv {
 
+enum class ReadingResult { ok, eof, buffer_full, fail };
+
 constexpr size_t DEFAULT_CAPACITY = 65536; // 64 KB chunk
 
+class IBuffer {
+public:
+    virtual ~IBuffer() = default;
+
+    virtual ReadingResult refill() = 0;
+    virtual std::string_view view() const = 0;
+    virtual void consume(size_t bytes) = 0;
+    virtual size_t available() const = 0;
+    virtual bool empty() const = 0;
+    virtual bool eof() const = 0;
+    virtual bool good() const = 0;
+    virtual void reset() = 0;
+};
+
 template <size_t N = DEFAULT_CAPACITY>
-class Buffer {
+class Buffer : public IBuffer {
     public:
         explicit Buffer(std::string_view filename)
             : stream_(std::make_unique<std::ifstream>(std::string(filename), std::ios::binary))
@@ -35,9 +51,8 @@ class Buffer {
         Buffer(Buffer&&) noexcept = default;
         Buffer& operator=(Buffer&&) noexcept = default;
 
-        enum class ReadingResult {ok, eof, buffer_full, fail};
 
-        ReadingResult refill() {
+        ReadingResult refill() override {
             compact();
 
             size_t space = free_space();
@@ -57,31 +72,31 @@ class Buffer {
             return ReadingResult::ok;
         }
 
-        std::string_view view() const {
+        std::string_view view() const override {
             return  {data_.get() + start_, available()};
         }
 
-        void consume(size_t bytes) {
+        void consume(size_t bytes) override {
             start_ += std::min(bytes, available());
         }
 
-        size_t available() const {
+        size_t available() const override {
             return size_ - start_;
         }
 
-        bool empty() const {
+        bool empty() const override {
             return start_ == size_;
         }
 
-        bool eof() const {
+        bool eof() const override {
             return available() == 0 && stream_->eof();
         }
 
-        bool good() const {
+        bool good() const override {
             return stream_->good() || !empty();
         }
 
-        void reset() {
+        void reset() override {
             stream_->clear();
             stream_->seekg(0);
             start_ = 0;

@@ -41,7 +41,7 @@ bool Reader::next() {
         if (buffer_.empty()) {
             auto refill_result = buffer_.refill();
 
-            if (refill_result == Buffer<>::ReadingResult::eof) {
+            if (refill_result == ReadingResult::eof) {
                 auto fields = parser_.move_fields();
 
                 if (!fields.empty()) {
@@ -52,7 +52,7 @@ bool Reader::next() {
                 return false;
             }
 
-            if (refill_result != Buffer<>::ReadingResult::ok) {
+            if (refill_result != ReadingResult::ok) {
                 return false;
             }
         }

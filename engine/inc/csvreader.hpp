@@ -42,8 +42,8 @@ public:
 
     bool good() const;
     bool has_header() const;
-    std::size_t line_number () const; // currentRecordIndex + 1
-    explicit operator bool() const; // return good()
+    std::size_t line_number () const;
+    explicit operator bool() const;
 
     // getters
     Config config() const;

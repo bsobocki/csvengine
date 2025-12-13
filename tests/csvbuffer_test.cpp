@@ -7,11 +7,9 @@ using namespace csv;
 constexpr size_t expected_no_data = 0;
 
 void verify_buffer_chunk(auto& buffer, const char* expected_start, size_t expected_size) {
-    using BufferType = std::remove_reference_t<decltype(buffer)>;
-
     EXPECT_TRUE(buffer.good());
 
-    EXPECT_EQ(buffer.refill(), BufferType::ReadingResult::ok);
+    EXPECT_EQ(buffer.refill(), ReadingResult::ok);
     EXPECT_EQ(buffer.available(), expected_size);
 
     auto expected_data = std::string_view(expected_start, expected_size);
@@ -24,8 +22,7 @@ void verify_buffer_chunk(auto& buffer, const char* expected_start, size_t expect
 }
 
 void verify_eof(auto& buffer) {
-    using BufferType = std::remove_reference_t<decltype(buffer)>;
-    EXPECT_EQ(buffer.refill(), BufferType::ReadingResult::eof);
+    EXPECT_EQ(buffer.refill(), ReadingResult::eof);
     EXPECT_TRUE(buffer.eof());
 }
 
@@ -70,7 +67,7 @@ TEST(BufferTest, DefaultBuffer64KB_ReadEmptyFile) {
 
     Buffer64KB buffer(std::make_unique<std::istringstream>(""));
 
-    EXPECT_EQ(buffer.refill(), Buffer64KB::ReadingResult::eof);
+    EXPECT_EQ(buffer.refill(), ReadingResult::eof);
     EXPECT_EQ(buffer.available(), expected_no_data);
     EXPECT_EQ(buffer.view(), std::string_view());
 }
@@ -81,7 +78,7 @@ TEST(BufferTest, DefaultBuffer64KB_ReadFile_OneUnfilledChunkOnly) {
 
     Buffer64KB buffer(std::make_unique<std::istringstream>(data));
 
-    EXPECT_EQ(buffer.refill(), Buffer64KB::ReadingResult::ok);
+    EXPECT_EQ(buffer.refill(), ReadingResult::ok);
     EXPECT_EQ(buffer.available(), data.size());
     EXPECT_EQ(buffer.view(), std::string_view(data));
 
@@ -89,7 +86,7 @@ TEST(BufferTest, DefaultBuffer64KB_ReadFile_OneUnfilledChunkOnly) {
     EXPECT_EQ(buffer.view(), std::string_view(data.data()+2));
     EXPECT_EQ(buffer.available(), data.size()-2);
     
-    EXPECT_EQ(buffer.refill(), Buffer64KB::ReadingResult::eof);
+    EXPECT_EQ(buffer.refill(), ReadingResult::eof);
     EXPECT_EQ(buffer.available(), data.size()-2);
     EXPECT_EQ(buffer.view(), std::string_view(data.data()+2));
 }
@@ -127,7 +124,7 @@ TEST(BufferTest, Buffer64B_Partialconsume) {
 TEST(BufferTest, Buffer64B_PartialConsume) {
     Buffer<64> buffer(std::make_unique<std::istringstream>("ABCDEF"));
 
-    EXPECT_EQ(buffer.refill(), Buffer<64>::ReadingResult::ok);
+    EXPECT_EQ(buffer.refill(), ReadingResult::ok);
     EXPECT_EQ(buffer.available(), 6);
 
     buffer.consume(3);
