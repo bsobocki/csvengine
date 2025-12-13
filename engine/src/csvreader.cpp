@@ -8,7 +8,7 @@ using namespace std;
 
 Reader::Reader(const std::string& filepath, const Config config)
     : csv_file_path_(filepath)
-    , buffer_(std::make_unique<Buffer<>>(filepath))
+    , buffer_(make_buffer(filepath))
     , config_(config)
     , parser_(config_)
 {
@@ -21,7 +21,7 @@ Reader::Reader(const std::string& filepath, const Config config)
 }
 
 Reader::Reader(std::unique_ptr<std::istream> stream, const Config config)
-    : buffer_(std::make_unique<Buffer<>>(std::move(stream)))
+    : buffer_(make_buffer(std::move(stream)))
     , config_(config)
     , parser_(config_)
 {

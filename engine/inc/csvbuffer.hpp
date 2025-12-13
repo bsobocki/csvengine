@@ -126,4 +126,14 @@ class Buffer : public IBuffer {
         size_t size_ = 0;
 };
 
+template<size_t N = DEFAULT_CAPACITY>
+std::unique_ptr<IBuffer> make_buffer(std::string_view filename) {
+    return std::make_unique<Buffer<N>>(filename);
+}
+
+template<size_t N = DEFAULT_CAPACITY>
+std::unique_ptr<IBuffer> make_buffer(std::unique_ptr<std::istream> stream) {
+    return std::make_unique<Buffer<N>>(std::move(stream));
+}
+
 }
