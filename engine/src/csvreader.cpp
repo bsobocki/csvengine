@@ -12,12 +12,7 @@ Reader::Reader(const std::string& filepath, const Config config)
     , config_(config)
     , parser_(config_)
 {
-    if (!buffer_->good())
-        throw std::runtime_error("Reader: cannot open " + filepath);
-
-    if (config_.has_header) {
-        read_headers();
-    }
+    init();
 }
 
 Reader::Reader(std::unique_ptr<std::istream> stream, const Config config)
@@ -25,12 +20,7 @@ Reader::Reader(std::unique_ptr<std::istream> stream, const Config config)
     , config_(config)
     , parser_(config_)
 {
-    if (!buffer_->good())
-        throw std::runtime_error("Reader: cannot deal with stream ");
-
-    if (config_.has_header) {
-        read_headers();
-    }
+    init();
 }
 
 Reader::Reader(std::unique_ptr<IBuffer> buffer, const Config config)
@@ -38,8 +28,13 @@ Reader::Reader(std::unique_ptr<IBuffer> buffer, const Config config)
     , config_(config)
     , parser_(config_)
 {
-    if (!buffer_->good())
+    init();
+}
+
+void Reader::init() {
+    if (!buffer_->good()) {
         throw std::runtime_error("Reader: cannot deal with buffer ");
+    }
 
     if (config_.has_header) {
         read_headers();

@@ -80,6 +80,7 @@ public:
 
 private:
     void read_headers();
+    void init();
 
     friend class Iterator;
 
