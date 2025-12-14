@@ -6,7 +6,7 @@
 
 **Author:** Bartosz Sobocki
 
-**Status:**  Review
+**Status:**  NEED TO FIX
 
 ---
 
@@ -965,64 +965,76 @@ Next:   [e",25,...]           <- Start of next buffer
 ```cpp
 template <size_t N = 65536> // 64KB default
 class CsvBuffer {
-public:
-    explicit CsvBuffer(std::string_view filename);
+    public:
+        explicit CsvBuffer(const std::string_view filename);
 
-    enum class Status { ok, eob, eof, fail };
+        enum class ReadingResult {ok, eof, fail};
 
-    // Access unconsumed data (zero-copy)
-    std::string_view view() const;
+        // overwrite only first bytes of the buffer with new data
+        ReadingResult read_first_bytes_of_data(size_t bytes);
+        // overwrite whole buffer with new data
+        ReadingResult read_data();
 
-    // Mark N bytes as consumed (move cursor forward)
-    void consume(size_t n);
+        size_t available_data_size() const;
+        size_t consumed_data_size() const;
 
-    // Check remaining bytes in buffer
-    size_t available() const;
+        // for reading char-by-char -- compiler cannot optimize it like range-based for loop on std::string_view
+        // so it can be slower than returning chunk-by-chunk and make range-based for loop on chunks
+        bool next_char(char& c);
 
-    // Compact + Refill (smart implementation below)
-    Status refill();
+        // for range-based for loop on available data
+        std::string_view consume_bytes(size_t bytes);
 
-    Status status() const;
+        // for manual lookahead parsing
+        void consume(const size_t bytes);
+        std::string_view peek() const;
+        std::string_view peek(const size_t bytes) const;
 
-private:
-    std::unique_ptr<char[]> data_;  // Heap-allocated (avoid stack overflow)
-    std::ifstream file_;
-    size_t start_ = 0;              // First unconsumed byte
-    size_t valid_end_ = 0;          // End of valid data
-    bool eof_reached_ = false;
+        size_t position() const;
+        bool eof() const;
+        bool is_open() const;
+
+        void reset();
+
+    private:
+        std::ifstream file_;
+        size_t size_ = 0;
+        size_t start_ = 0;
+        std::unique_ptr<char[]> data_;
+        const size_t capacity_ = N;
 };
 ```
 
-### Key Implementation: `refill()` with Smart Compaction
+### Usage Examples:
 
+#### Example 1: Lookahead parsing
 ```cpp
-template<size_t N>
-typename CsvBuffer<N>::Status CsvBuffer<N>::refill() {
-    size_t unconsumed = valid_end_ - start_;
+auto data = buffer.peek();  // Look without consuming
 
-    // Strategy 1: If leftover data is small, compact it
-    if (unconsumed > 0 && unconsumed < N / 8) {  // < 12.5% of buffer
-        std::memmove(data_.get(), &data_[start_], unconsumed);
-        start_ = 0;
-        valid_end_ = unconsumed;
-    }
-    // Strategy 2: If leftover data is large, signal parser
-    else if (unconsumed > 0) {
-        // Parser should finish processing current row before refilling
-        return Status::eob; // "End of buffer, but data remains"
-    }
-    
-    // Read new data into available space
-    file_.read(&data_[valid_end_], N - valid_end_);
-    valid_end_ += file_.gcount();
+if (data[0] == '"') {
+    // Handle quoted field
+    size_t close_quote = data.find('"', 1);
+    buffer.consume(close_quote + 1);
+} else {
+    // Handle unquoted field
+    size_t comma = data.find(',');
+    buffer.consume(comma + 1);
+}
+```
 
-    if (valid_end_ == 0) {
-        eof_reached_ = true;
-        return Status::eof;
-    }
+#### Example 2: Consume directly
+```cpp
+auto chunk = buffer.consume_bytes(100);  // Get and advance
+for (char c : chunk) {
+    process(c);
+}
+```
 
-    if (file_.eof()) eof_reached_ = true;
-    return Status::ok;
+#### Example 3: Char-by-char (fallback)
+```cpp
+char c;
+while (buffer.next_char(c)) {
+    if (c == '\n') break;
 }
 ```
 
@@ -1035,56 +1047,6 @@ typename CsvBuffer<N>::Status CsvBuffer<N>::refill() {
 | **Giant field** (> buffer size) | O(field size) | Very rare | Acceptable |
 
 **Key Insight:** By only compacting when leftover data is small, we make `memmove` cheap. When leftover data is large, we signal the parser to consume more before refilling.
-
-## 5.4.4 Parser Integration Pattern
-
-```cpp
-void parse_csv(CsvBuffer<>& buffer) {
-    std::string overflow; // Accumulates split rows
-
-    while (buffer.status() != CsvBuffer<>::Status::eof) {
-        auto data = buffer.view();
-
-        // Search for complete row (newline not in quotes)
-        size_t newline_pos = find_row_end(data); 
-
-        if (newline_pos != npos) {
-            // Found complete row
-            std::string_view row_data;
-
-            if (!overflow.empty()) {
-                // Row started in previous buffer
-                overflow.append(data.substr(0, newline_pos));
-                row_data = overflow;
-            } else {
-                // Entire row in buffer (ZERO COPY!)
-                row_data = data.substr(0, newline_pos);
-            }
-
-            parse_and_emit_row(row_data);
-            overflow.clear();
-            buffer.consume(newline_pos + 1);
-        } 
-        else {
-            // Incomplete row: save and refill
-            overflow.append(data);
-            buffer.consume(data.size());
-
-            auto status = buffer.refill();
-            if (status == CsvBuffer<>::Status::eob) {
-                // Buffer says: "I have unconsumed data, finish processing first"
-                // This should not happen if parser consumes properly
-                throw std::logic_error("Parser/Buffer synchronization error");
-            }
-        }
-    }
-
-    // Handle last row (may not end with newline)
-    if (!overflow.empty()) {
-        parse_and_emit_row(overflow);
-    }
-}
-```
 
 ## 5.4.5 Performance Characteristics
 
