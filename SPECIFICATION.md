@@ -153,8 +153,8 @@
 struct CSVConfig {
     char delimiter = ',';
     bool has_header = true;
-    enum class ErrorHandlerMode { strict, lenient };
-    ErrorHandlerMode errorHandlerMode = ErrorHandlerMode::strict;
+    enum class ParseMode { strict, lenient };
+    ParseMode errorHandlerMode = ParseMode::strict;
     enum class LineEnding { Auto, LF, CRLF, CR }
 };
 ```
@@ -353,8 +353,12 @@ delimiter/newline, not when `\n` appears inside quotes.
 ## 2.5 Key Decisions
 
 **Decision: [Quote Handling]**
-- **Context:** What happens when quotes appear mid-field?
+- **Context:** What happens when start quotes appear mid-field?
 - **Decision:** Treat as literals unless at field start
+
+**Decision: [Quote Handling]**
+- **Context:** What happens when end quotes appear mid-field?
+- **Decision:** Treat as literals unless at field end
 
 **Decision: [Empty Row Behavior]**
 - **Context:** How to handle blank lines in CSV?
@@ -851,8 +855,8 @@ public:
 [User Code]
      │ calls nextRecord()
      ▼
-[CSVReader] <──────────────────────────────────────────────┐
-     │ 1. Is buffer low? ──┤Yes├──> [Read from File]       │
+[CSVReader] ◄──────────────────────────────────────────────┐
+     │ 1. Is buffer low? ──┤Yes├──► [Read from File]       │
      │ 2. Create view of buffer                            │
      │ 3. Call parser.parse_chunk(view)                    │
      ▼                                                     │
