@@ -1,4 +1,5 @@
 #include <csvparser.hpp>
+#include <iostream>
 
 using namespace csv;
 
@@ -63,7 +64,7 @@ Parser::ParseStatus Parser::naive_parse(std::string_view buffer) {
     auto fields = split(line, config_.delimiter);
     insert_fields(fields);
 
-    consumed_ += line.size();
+    consumed_ += line.size()  + 1; // + newline character
 
     return Parser::ParseStatus::complete;
 }

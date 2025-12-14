@@ -11,13 +11,13 @@ Record::Record(std::vector<std::string>&& fields, std::vector<std::string>&& hea
 }
 
 Record::Record(const std::vector<std::string_view>& fields, const std::vector<std::string_view>& headers):
-    fields_(std::vector<std::string>(fields.begin(), fields.end())),
-    headers_(std::vector<std::string>(headers.begin(), headers.end())) {
+    fields_(fields.begin(), fields.end()),
+    headers_(headers.begin(), headers.end()) {
 }
 
 Record::Record(std::vector<std::string_view>&& fields, std::vector<std::string>&& headers):
-    fields_(std::vector<std::string>(fields.begin(), fields.end())),
-    headers_(std::vector<std::string>(headers.begin(), headers.end())) {
+    fields_(fields.begin(), fields.end()),
+    headers_(headers.begin(), headers.end()) {
 }
 
 const std::vector<std::string>& Record::fields() const {

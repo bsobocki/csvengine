@@ -19,6 +19,32 @@ TEST(ReaderTest, ReadSimpleHeaders) {
     EXPECT_EQ(reader.headers(), expectedHeaders);
 }
 
+TEST(ReaderTest, ReadSimpleRecords) {
+    // csv data from simple_file.csv
+    Reader reader(std::make_unique<std::istringstream>(simple_csv_data));
+    
+    EXPECT_TRUE(reader.next());
+    std::vector<std::string> expectedFields = {"Ken Adams","18","USA"};
+    EXPECT_EQ(reader.current_record().fields(), expectedFields);
+    
+    EXPECT_TRUE(reader.next());
+    expectedFields = {"Cristiano Ronaldo","35","Portugal"};
+    EXPECT_EQ(reader.current_record().fields(), expectedFields);
+
+    EXPECT_TRUE(reader.next());
+    expectedFields = {"Gunter Shmitt","45","Germany"};
+    EXPECT_EQ(reader.current_record().fields(), expectedFields);
+
+    EXPECT_TRUE(reader.next());
+    expectedFields = {"Andrzej Kowalski","55","Poland"};
+    EXPECT_EQ(reader.current_record().fields(), expectedFields);
+
+    EXPECT_TRUE(reader.next());
+    expectedFields = {"John Krasinski","40","USA"};
+    EXPECT_EQ(reader.current_record().fields(), expectedFields);
+    EXPECT_FALSE(reader.next());
+}
+
 // -- Quoting Parsing Tests
 
 TEST(ReaderTest, ReadQuotingHeaders) {
