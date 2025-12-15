@@ -14,11 +14,11 @@ TEST(ParserTest, ) {
 TEST(ParserTest, StrictParsing_Malformed_QuoteInUnquotedField) {
     std::string input = R"(aa"ada","normal")";
     Parser parser();
-    EXPECT_THROW(parse(input), Parser::ParseStatus::fail);
+    EXPECT_EQ(parse(input), Parser::ParseStatus::fail);
 }
 
 TEST(ParserTest, StrictParsing_Malformed_ContentAfterClosingQuote) {
     std::string input = R"("something""different"here,next)";
     Parser parser();
-    EXPECT_THROW(parse(input), Parser::ParseStatus::fail);
+    EXPECT_EQ(parse(input), Parser::ParseStatus::fail);
 }
