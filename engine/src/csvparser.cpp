@@ -28,13 +28,76 @@ Parser::Parser(Config config): config_(config) {
 }
 
 Parser::ParseStatus Parser::parse(std::string_view buffer) {
+    if (config_.has_quoting) {
+        if (config_.parse_mode == Config::ParseMode::strict) {
+            return csv_quotes_strict_parse(buffer);
+        }
+        return csv_quotes_lenient_parse(buffer);
+    } 
     return naive_parse(buffer);
 }
 
-Parser::ParseStatus Parser::csv_quotes_parse(std::string_view buffer) {
-    // TODO: implement parsing with quotes
-    (void)buffer;
-    return Parser::ParseStatus::fail;
+// === simplest csv quotes parsing - char by char ===
+
+// strict mode
+Parser::ParseStatus Parser::csv_quotes_strict_parse(std::string_view buffer) {
+    auto ch = buffer.begin();
+    auto field_start = ch;
+    consumed_ = 0;
+
+    auto is_beg =     [&](auto ch) { return ch == buffer.begin(); };
+    auto is_end =     [&](auto ch) { return ch == buffer.end(); };
+    auto is_quote =   [&](auto ch) { return !is_end(ch) && *ch == quoting_char; };
+    auto is_delim =   [&](auto ch) { return *ch == config_.delimiter; };
+    auto is_newline = [&](auto ch) { return *ch == '\n'; };
+    auto add_field =  [&](auto ch) { 
+        fields_.emplace_back(field_start, ch);
+        consumed_ += std::distance(field_start, ch);
+    };
+
+    while (!is_end(ch)) {
+        if (is_newline(ch) && !in_quotes_) {
+            consumed_++;
+            add_field(ch);
+            return ParseStatus::complete;
+        }
+
+        if (is_delim(ch) && !in_quotes_) {
+            consumed_++;
+            add_field(ch);
+            field_start = ch+1;
+        }
+        else if (is_quote(ch)) {
+            // double quote => literal
+            if (!is_end(ch+1) && is_quote(ch+1)) {
+                ch++; // skip one char to make literal
+            }
+            // one quote char => quoting
+            else if (in_quotes_) {
+                if (!is_end(ch+1) && !is_delim(ch+1) && !is_newline(ch+1)) {
+                    return ParseStatus::fail;
+                }
+                add_field(ch+1);
+                in_quotes_ = false;
+            }
+            else if (is_beg(ch) || (!is_beg(ch) && is_delim(ch-1))) {
+                in_quotes_ = true;
+            }
+        }
+        // skip every other character 
+        ch++;
+    }
+
+    add_field(ch);
+    is_last_field_not_full_ = true;
+
+    return Parser::ParseStatus::need_more_data;
+}
+
+// lenient mode
+Parser::ParseStatus Parser::csv_quotes_lenient_parse(std::string_view buffer) {
+    // TODO: implement lenient parse
+    return csv_quotes_strict_parse(buffer);
 }
 
 Parser::ParseStatus Parser::naive_parse(std::string_view buffer) {
@@ -84,7 +147,6 @@ void Parser::insert_fields(const std::vector<std::string_view>& fields) {
 void Parser::reset() {
     in_quotes_ = false;
     fields_ = {};
-    field_start_ = 0;
     consumed_ = 0;
     err_msg_ = "";
 }

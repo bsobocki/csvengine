@@ -5,6 +5,7 @@ namespace csv {
 struct Config {
     char delimiter = ',';
     bool has_header = true;
+    bool has_quoting = true;
 
     enum class ParseMode { strict, lenient };
     ParseMode parse_mode = ParseMode::strict;

@@ -42,6 +42,7 @@ TEST(ReaderTest, ReadSimpleRecords) {
     EXPECT_TRUE(reader.next());
     expectedFields = {"John Krasinski","40","USA"};
     EXPECT_EQ(reader.current_record().fields(), expectedFields);
+
     EXPECT_FALSE(reader.next());
 }
 

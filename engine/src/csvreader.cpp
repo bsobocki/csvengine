@@ -61,7 +61,7 @@ bool Reader::next() {
                     current_record_ = Record(std::move(fields));
                     return true;
                 }
-
+                std::cout<< "Fail on buffer!" << std::endl;
                 return false;
             }
 
@@ -80,6 +80,7 @@ bool Reader::next() {
         }
 
         if (result == Parser::ParseStatus::fail) {
+                std::cout<< "Fail on parser!" << std::endl;
             break;
         }
     }
