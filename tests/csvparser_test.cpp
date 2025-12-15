@@ -8,20 +8,23 @@ using namespace csv;
 
 TEST(ParserTest, StrictParsing_Malformed_QuoteInUnquotedField) {
     std::string input = R"(aa"ada","normal")";
-    Parser parser();
-    EXPECT_EQ(parser.parse(input), Parser::ParseStatus::fail);
+    std::string_view data = input;
+    Parser parser({.parse_mode = Config::ParseMode::strict});
+    EXPECT_EQ(parser.parse(data), Parser::ParseStatus::fail);
 }
 
 TEST(ParserTest, StrictParsing_Malformed_ContentAfterClosingQuote) {
     std::string input = R"("something""different"here,next)";
-    Parser parser();
-    EXPECT_EQ(parser.parse(input), Parser::ParseStatus::fail);
+    std::string_view data = input;
+    Parser parser({.parse_mode = Config::ParseMode::strict});
+    EXPECT_EQ(parser.parse(data), Parser::ParseStatus::fail);
 }
 
 TEST(ParserTest, StrictParsing_CorrectQuoting_NoContentAfterClosingQuote) {
-    std::string input = R"("something""different",next)";
-    Parser parser();
-    std::vector<std::string> expectedFields = {"something""different", "next"};
-    EXPECT_EQ(parser.parse(input), Parser::ParseStatus::complete);
-    EXPECT_EQ(parser.fields(), expectedFields);
+    std::string input = "\"something\"\"different\",next\n";
+    std::string_view data = input;
+    Parser parser({.parse_mode = Config::ParseMode::strict});
+    std::vector<std::string> expectedFields = {"something\"\"different", "next"};
+    EXPECT_EQ(parser.parse(data), Parser::ParseStatus::complete);
+    EXPECT_EQ(parser.move_fields(), expectedFields);
 }

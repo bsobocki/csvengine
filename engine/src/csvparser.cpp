@@ -49,7 +49,7 @@ Parser::ParseStatus Parser::csv_quotes_strict_parse(std::string_view buffer) {
     auto is_end =     [&](auto ch) { return ch == buffer.end(); };
     auto is_quote =   [&](auto ch) { return !is_end(ch) && *ch == quoting_char; };
     auto is_delim =   [&](auto ch) { return *ch == config_.delimiter; };
-    auto is_newline = [&](auto ch) { return *ch == '\n'; };
+    auto is_newline = [&](auto ch) { return config_.is_line_ending(*ch); };
     auto add_field =  [&](auto ch) { 
         fields_.emplace_back(field_start, ch);
         consumed_ += std::distance(field_start, ch);
@@ -72,16 +72,35 @@ Parser::ParseStatus Parser::csv_quotes_strict_parse(std::string_view buffer) {
             if (!is_end(ch+1) && is_quote(ch+1)) {
                 ch++; // skip one char to make literal
             }
-            // one quote char => quoting
+            // one quote => quoting
             else if (in_quotes_) {
-                if (!is_end(ch+1) && !is_delim(ch+1) && !is_newline(ch+1)) {
-                    return ParseStatus::fail;
+                if (!is_end(ch+1)) {
+                    // wrong quoting => data after quotes
+                    if (!is_delim(ch+1) && !is_newline(ch+1)) {
+                        std::cout << "parse failed as end quote in wrong place! " <<std::endl;
+                        return ParseStatus::fail;
+                    }
+
+                    add_field(ch);
+                    field_start = ch+2; // next field after quote and delim (for newline we will return status complete)
+                    consumed_++; // consume also this char, even though we don't include it in field
+
+                    if (is_delim(ch+1)) {
+                        ch++; // skip delim to add only one field
+                    }
+                    else if (is_newline(ch+1)) {
+                        return ParseStatus::complete;
+                    }
                 }
-                add_field(ch+1);
                 in_quotes_ = false;
             }
             else if (is_beg(ch) || (!is_beg(ch) && is_delim(ch-1))) {
                 in_quotes_ = true;
+                field_start++;
+            }
+            else {
+                std::cout << "parse failed as start quote in wrong place! " <<std::endl;
+                return ParseStatus::fail;
             }
         }
         // skip every other character 
@@ -91,6 +110,7 @@ Parser::ParseStatus Parser::csv_quotes_strict_parse(std::string_view buffer) {
     add_field(ch);
     is_last_field_not_full_ = true;
 
+    std::cout << "parse need more data! " <<std::endl;
     return Parser::ParseStatus::need_more_data;
 }
 
