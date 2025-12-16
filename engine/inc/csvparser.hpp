@@ -32,8 +32,11 @@ private:
     void insert_fields(const std::vector<std::string_view>& fields);
 
     Config config_;
+
     bool in_quotes_ = false;
-    bool is_last_field_not_full_ = false;
+    bool incomplete_last_read_ = false;
+    bool incomplete_with_quote_as_last_char_ = false;
+
     std::vector<std::string> fields_ = {};
     size_t consumed_ = 0;
     std::string err_msg_ = "";

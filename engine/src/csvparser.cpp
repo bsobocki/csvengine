@@ -41,29 +41,72 @@ Parser::ParseStatus Parser::parse(std::string_view buffer) {
 
 // strict mode
 Parser::ParseStatus Parser::csv_quotes_strict_parse(std::string_view buffer) {
-    auto ch = buffer.begin();
-    auto field_start = ch;
     consumed_ = 0;
 
-    auto is_beg =     [&](auto ch) { return ch == buffer.begin(); };
-    auto is_end =     [&](auto ch) { return ch == buffer.end(); };
-    auto is_quote =   [&](auto ch) { return !is_end(ch) && *ch == quoting_char; };
-    auto is_delim =   [&](auto ch) { return *ch == config_.delimiter; };
-    auto is_newline = [&](auto ch) { return config_.is_line_ending(*ch); };
-    auto add_field =  [&](auto ch) { 
-        fields_.emplace_back(field_start, ch);
-        consumed_ += std::distance(field_start, ch);
-    };
+    if (buffer.size() == 0) return ParseStatus::need_more_data;
 
-    while (!is_end(ch)) {
-        if (is_newline(ch) && !in_quotes_) {
-            consumed_++;
-            add_field(ch);
+    auto ch = buffer.begin();
+    auto field_start = ch;
+    size_t current_field_quote_literals = 0;    
+    
+    auto is_beg     = [&](auto ch) { return ch == buffer.begin(); };
+    auto is_end     = [&](auto ch) { return ch == buffer.end(); };
+    auto is_quote   = [&](auto ch) { return *ch == quoting_char; };
+    auto is_delim   = [&](auto ch) { return *ch == config_.delimiter; };
+    auto is_newline = [&](auto ch) { return config_.is_line_ending(*ch); };
+
+    if (incomplete_with_quote_as_last_char_) {
+        incomplete_with_quote_as_last_char_ = false;
+
+        if (is_quote(ch)) {
+            in_quotes_ = true;
+            ch++;
+        }
+        else if (!is_delim(ch) && !is_newline(ch)) {
+            return ParseStatus::fail;
+        }
+
+        if (is_newline(ch)) {
             return ParseStatus::complete;
         }
 
-        if (is_delim(ch) && !in_quotes_) {
+        if (is_delim(ch)) {
+            ch++; // we already have the field
+            field_start = ch;
+            incomplete_last_read_ = false;
+        }
+    }
+
+    auto add_field =  [&](auto ch) {
+        if (!incomplete_last_read_) {
+            fields_.emplace_back("");
+        }
+
+        std::string& field_ref = fields_.back();
+        size_t new_part_idx = field_ref.size();
+
+        size_t curr_field_size = std::distance(field_start, ch) - current_field_quote_literals;
+        field_ref.resize(field_ref.size() + curr_field_size);
+
+        auto it = field_start;
+        while (it != ch) {
+            field_ref[new_part_idx++] = *it++;
+            // for double quotes just skip the next one
+            if (is_quote(it) && is_quote(it-1)) it++;
+        }
+        
+        current_field_quote_literals = 0;
+        incomplete_last_read_ = false;
+    };
+    
+    while (!is_end(ch)) {
+        if (is_newline(ch) && !in_quotes_) {
+            add_field(ch);
             consumed_++;
+            return ParseStatus::complete;
+        }
+        
+        if (is_delim(ch) && !in_quotes_) {
             add_field(ch);
             field_start = ch+1;
         }
@@ -71,46 +114,59 @@ Parser::ParseStatus Parser::csv_quotes_strict_parse(std::string_view buffer) {
             // double quote => literal
             if (!is_end(ch+1) && is_quote(ch+1)) {
                 ch++; // skip one char to make literal
+                current_field_quote_literals++;
             }
             // one quote => quoting
             else if (in_quotes_) {
+                in_quotes_ = false;
+
                 if (!is_end(ch+1)) {
+                    bool is_next_delim = is_delim(ch+1);
+                    bool is_next_newline = is_newline(ch+1);
+
                     // wrong quoting => data after quotes
-                    if (!is_delim(ch+1) && !is_newline(ch+1)) {
-                        std::cout << "parse failed as end quote in wrong place! " <<std::endl;
+                    if (!is_next_delim && !is_next_newline) {
                         return ParseStatus::fail;
                     }
-
+                    
+                    // for delim or newline as next char
                     add_field(ch);
-                    field_start = ch+2; // next field after quote and delim (for newline we will return status complete)
-                    consumed_++; // consume also this char, even though we don't include it in field
+                    ch += 2;
+                    consumed_ += 2;
+                    field_start = ch;
 
-                    if (is_delim(ch+1)) {
-                        ch++; // skip delim to add only one field
+                    if (is_next_delim) {
+                        continue;
                     }
-                    else if (is_newline(ch+1)) {
+
+                    if (is_next_newline) {
                         return ParseStatus::complete;
                     }
                 }
-                in_quotes_ = false;
+                // end, so we need to mark field as incomplete and show that the last char was quote
+                // if the first character of the next buffer will be also qyote then we will have just literal
+                else {
+                    incomplete_with_quote_as_last_char_ = true;
+                }
             }
             else if (is_beg(ch) || (!is_beg(ch) && is_delim(ch-1))) {
                 in_quotes_ = true;
-                field_start++;
+                field_start = ch+1; // skip open quote in field
             }
             else {
-                std::cout << "parse failed as start quote in wrong place! " <<std::endl;
                 return ParseStatus::fail;
             }
         }
         // skip every other character 
         ch++;
+        consumed_++;
     }
 
-    add_field(ch);
-    is_last_field_not_full_ = true;
+    if (incomplete_with_quote_as_last_char_) ch--;
 
-    std::cout << "parse need more data! " <<std::endl;
+    add_field(ch);
+    incomplete_last_read_ = true;
+
     return Parser::ParseStatus::need_more_data;
 }
 
@@ -126,7 +182,7 @@ Parser::ParseStatus Parser::naive_parse(std::string_view buffer) {
 
     if (newline_pos == std::string_view::npos) {
         if (buffer.empty()) {
-            is_last_field_not_full_ = true;
+            incomplete_last_read_ = true;
             return Parser::ParseStatus::need_more_data;
         }
         else {
@@ -154,9 +210,9 @@ Parser::ParseStatus Parser::naive_parse(std::string_view buffer) {
 
 void Parser::insert_fields(const std::vector<std::string_view>& fields) {
     auto field = fields.begin();
-    if (is_last_field_not_full_) {
+    if (incomplete_last_read_) {
         fields_[fields_.size()-1] += *field++;
-        is_last_field_not_full_ = false;
+        incomplete_last_read_ = false;
     }
 
     while(field != fields.end()) {
@@ -166,6 +222,7 @@ void Parser::insert_fields(const std::vector<std::string_view>& fields) {
 
 void Parser::reset() {
     in_quotes_ = false;
+    incomplete_last_read_ = false;
     fields_ = {};
     consumed_ = 0;
     err_msg_ = "";
