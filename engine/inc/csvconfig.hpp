@@ -6,6 +6,7 @@ struct Config {
     char delimiter = ',';
     bool has_header = true;
     bool has_quoting = true;
+    char quote_char = '\"';
 
     enum class ParseMode { strict, lenient };
     ParseMode parse_mode = ParseMode::strict;

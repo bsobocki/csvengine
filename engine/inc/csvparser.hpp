@@ -15,13 +15,13 @@ public:
     explicit Parser(Config config);
 
     /// @brief function parse doesn't reset the parser state
-    ParseStatus parse(std::string_view buffer);
+    [[nodiscard]] ParseStatus parse(std::string_view buffer);
 
-    size_t consumed() const;
+    [[nodiscard]] size_t consumed() const;
 
-    std::string err_msg() const;
+    [[nodiscard]] std::string err_msg() const;
 
-    std::vector<std::string> move_fields() const;
+    std::vector<std::string> move_fields();
 
     void reset();
 
@@ -34,12 +34,12 @@ private:
     Config config_;
 
     bool in_quotes_ = false;
+    bool pending_quote_ = false;
     bool incomplete_last_read_ = false;
-    bool incomplete_with_quote_as_last_char_ = false;
 
-    std::vector<std::string> fields_ = {};
+    std::vector<std::string> fields_;
     size_t consumed_ = 0;
-    std::string err_msg_ = "";
+    std::string err_msg_;
 };
 
 }
