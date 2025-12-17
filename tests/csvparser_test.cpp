@@ -34,17 +34,35 @@ TEST(ParserTest, StrictParsing_CorrectQuoting_NeedMoreDataWithLastCharAsQuote) {
     
     std::string input = "\"something\"";
     std::string_view data = input;
-    std::vector<std::string> expectedFields = {"something"};
     EXPECT_EQ(parser.parse(data), Parser::ParseStatus::need_more_data);
 
     input = "\"different\"";
     data = input;
-    expectedFields = {"something\"different"};
     EXPECT_EQ(parser.parse(data), Parser::ParseStatus::need_more_data);
     
     input = ",next\n";
     data = input;
-    expectedFields = {"something\"different", "next"};
     EXPECT_EQ(parser.parse(data), Parser::ParseStatus::complete);
+
+    std::vector<std::string> expectedFields = {"something\"different", "next"};
+    EXPECT_EQ(parser.move_fields(), expectedFields);
+}
+
+TEST(ParserTest, StrictParsing_NewlineAndDelimiterInQuotes) {
+    Parser parser({.parse_mode = Config::ParseMode::strict});
+    
+    std::string input = "\"something";
+    std::string_view data = input;
+    EXPECT_EQ(parser.parse(data), Parser::ParseStatus::need_more_data);
+
+    input = "\n,\",different,\"";
+    data = input;
+    EXPECT_EQ(parser.parse(data), Parser::ParseStatus::need_more_data);
+    
+    input = ",next\"\n";
+    data = input;
+    EXPECT_EQ(parser.parse(data), Parser::ParseStatus::complete);
+
+    std::vector<std::string> expectedFields = {"something\n,","different", ",next"};
     EXPECT_EQ(parser.move_fields(), expectedFields);
 }
