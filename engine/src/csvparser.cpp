@@ -129,7 +129,7 @@ Parser::ParseStatus Parser::csv_quotes_strict_parse(std::string_view buffer) {
             auto next_buff_it = buff_it + 1;
 
             // double quote => literal
-            if (!is_end(next_buff_it) && is_quote(*next_buff_it)) {
+            if (in_quotes_ && !is_end(next_buff_it) && is_quote(*next_buff_it)) {
                 consume(); // skip one char to make literal
                 current_field_quote_literals++;
             }
@@ -259,4 +259,8 @@ std::string Parser::err_msg() const {
 
 std::vector<std::string> Parser::move_fields() {
     return std::move(fields_);
+}
+
+std::vector<std::string_view> Parser::peek_fields() {
+    return std::vector<std::string_view>(fields_.begin(), fields_.end());
 }

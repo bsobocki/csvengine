@@ -22,6 +22,7 @@ public:
     [[nodiscard]] std::string err_msg() const;
 
     std::vector<std::string> move_fields();
+    std::vector<std::string_view> peek_fields();
 
     void reset();
 
