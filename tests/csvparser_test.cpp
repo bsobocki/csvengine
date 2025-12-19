@@ -62,20 +62,16 @@ TEST_F(ParserTest, StrictParsing_CorrectQuoting_NeedMoreDataWithLastCharAsQuote)
 }
 
 TEST_F(ParserTest, StrictParsing_NewlineAndDelimiterInQuotes) {
-    Parser parser({.parse_mode = Config::ParseMode::strict});
-    
-    std::string input = "\"something";
-    std::string_view data = input;
-    EXPECT_EQ(parser.parse(data), Parser::ParseStatus::need_more_data);
-
-    input = "\n,\",different,\"";
-    data = input;
-    EXPECT_EQ(parser.parse(data), Parser::ParseStatus::need_more_data);
-    
-    input = ",next\"\n";
-    data = input;
-    EXPECT_EQ(parser.parse(data), Parser::ParseStatus::complete);
+    ExpectParse(strict_parser,  "\"something", Parser::ParseStatus::need_more_data, {"something"});
+    ExpectParse(strict_parser, "\n,\",different,\"", Parser::ParseStatus::need_more_data, {"something\n,","different", ""});
+    ExpectParse(strict_parser, ",next\"\n", Parser::ParseStatus::complete, {"something\n,","different", ",next"});
 
     std::vector<std::string> expected_fields = {"something\n,","different", ",next"};
-    EXPECT_EQ(parser.move_fields(), expected_fields);
+    EXPECT_EQ(strict_parser.move_fields(), expected_fields);
+}
+
+TEST_F(ParserTest, CustomDelimiter_Semicolon) {
+    Parser semi_parser{{.delimiter = ';'}};
+    ExpectParse(semi_parser, "a;b;c\n", 
+                Parser::ParseStatus::complete, {"a", "b", "c"});
 }
