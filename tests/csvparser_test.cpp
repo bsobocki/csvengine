@@ -11,6 +11,7 @@ protected:
     Parser strict_parser{{.parse_mode = Config::ParseMode::strict}};
     Parser lenient_parser{{.parse_mode = Config::ParseMode::lenient}};
     Parser no_quote_parser{{.has_quoting = false}};
+    Parser semi_parser{{.delimiter = ';'}};
 
     void ExpectParse(Parser& parser,
                 std::string_view input,
@@ -71,7 +72,21 @@ TEST_F(ParserTest, StrictParsing_NewlineAndDelimiterInQuotes) {
 }
 
 TEST_F(ParserTest, CustomDelimiter_Semicolon) {
-    Parser semi_parser{{.delimiter = ';'}};
     ExpectParse(semi_parser, "a;b;c\n", 
                 Parser::ParseStatus::complete, {"a", "b", "c"});
+}
+
+TEST_F(ParserTest, CustomDelimiter_CommaInFieldWithSemicolonDelim) {
+    ExpectParse(semi_parser, "a,b;c,d\n", 
+                Parser::ParseStatus::complete, {"a,b", "c,d"});
+}
+
+TEST_F(ParserTest, NoQuoting_QuotesAreLiteral) {
+    ExpectParse(no_quote_parser, "\"hello\"\n", 
+                Parser::ParseStatus::complete, {"\"hello\""});
+}
+
+TEST_F(ParserTest, NoQuoting_QuoteInMiddle) {
+    ExpectParse(no_quote_parser, "hel\"lo\n", 
+                Parser::ParseStatus::complete, {"hel\"lo"});
 }
