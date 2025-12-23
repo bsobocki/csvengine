@@ -2,6 +2,8 @@
 #include <csvreader.hpp>
 #include <testdata.hpp>
 
+#include <csvbuffer_mock.hpp>
+
 using namespace csv;
 
 TEST(ReaderTest, OpenTheFile) {

@@ -12,12 +12,14 @@ add_executable(run_tests
 target_link_libraries(run_tests
   PRIVATE
     gtest_main
+    gmock
     csvengine
 )
 
 target_include_directories(run_tests
   PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/test_data
+    ${CMAKE_CURRENT_SOURCE_DIR}/mocks
 )
 
 # Copy test_data directory to the build directory
