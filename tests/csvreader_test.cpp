@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <csvreader.hpp>
+#include <csverrors.hpp>
 #include <testdata.hpp>
 
 #include <csvbuffer_mock.hpp>
@@ -109,4 +110,25 @@ TEST_F(ReaderTest, NextReturnsTrueWhenDataAvailable) {
 
     EXPECT_TRUE(reader->next());
     EXPECT_EQ(reader->current_record().fields(), std::vector<std::string>({"val1", "val2"}));
+}
+
+TEST_F(ReaderTest, BufferErrorOnInit) {
+    auto mock_buffer = std::make_unique<MockBuffer>();
+    MockBuffer* mock_buffer_ptr = mock_buffer.get();
+
+    ON_CALL(*mock_buffer_ptr, good()).WillByDefault(Return(false));
+
+    EXPECT_THROW(Reader reader(std::move(mock_buffer)), BufferError);
+}
+
+TEST_F(ReaderTest, HeadersErrorOnInit) {
+    auto mock_buffer = std::make_unique<MockBuffer>();
+    MockBuffer* mock_buffer_ptr = mock_buffer.get();
+
+    ON_CALL(*mock_buffer_ptr, good()).WillByDefault(Return(true));
+    
+    ON_CALL(*mock_buffer_ptr, empty()).WillByDefault(Return(true));
+    ON_CALL(*mock_buffer_ptr, refill()).WillByDefault(Return(ReadingResult::fail));
+
+    EXPECT_THROW(Reader reader(std::move(mock_buffer)), FileHeaderError);
 }
