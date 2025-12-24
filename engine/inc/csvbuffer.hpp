@@ -45,7 +45,13 @@ class Buffer : public IBuffer {
         // for testing
         explicit Buffer(std::unique_ptr<std::istream> stream)
             : stream_(std::move(stream))
-            , data_(std::make_unique<char[]>(N)) {}
+            , data_(std::make_unique<char[]>(N))
+        {
+
+            if (!stream_->good()) {
+                throw FileStreamError();
+            }
+        }
 
         Buffer(const Buffer&) = delete;
         Buffer& operator=(const Buffer&) = delete;

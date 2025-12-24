@@ -18,10 +18,11 @@ public:
 
 class FileStreamError : public std::runtime_error {
 public:
-    FileStreamError(const std::string& filename): std::runtime_error(msg + filename) {}
-    FileStreamError(const std::string_view& filename): std::runtime_error(msg + std::string(filename)) {}
+    FileStreamError(): std::runtime_error(msg) {}
+    FileStreamError(const std::string& filename): std::runtime_error(msg + " for file: " + filename) {}
+    FileStreamError(const std::string_view& filename): std::runtime_error(msg + " for file: " + std::string(filename)) {}
 private:
-    std::string msg = "Stream failed for file: ";
+    std::string msg = "Stream failed";
 }; 
 
 }
