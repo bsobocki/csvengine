@@ -4,6 +4,7 @@
 namespace csv {
 
 class MockBuffer : public IBuffer {
+public:
     MOCK_METHOD(ReadingResult, refill, (), (override));
     MOCK_METHOD(std::string_view, view, (), (const, override));
     MOCK_METHOD(void, consume, (size_t), (override));
