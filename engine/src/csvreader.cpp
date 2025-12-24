@@ -1,5 +1,6 @@
 #include <csvreader.hpp>
 #include <csvparser.hpp>
+#include <csverrors.hpp>
 #include <optional>
 #include <format>
 
@@ -33,7 +34,7 @@ Reader::Reader(std::unique_ptr<IBuffer> buffer, const Config config)
 
 void Reader::init() {
     if (!buffer_->good()) {
-        throw std::runtime_error("Reader: cannot deal with buffer ");
+        throw BufferError();
     }
 
     if (config_.has_header) {
@@ -42,7 +43,10 @@ void Reader::init() {
 }
 
 void Reader::read_headers() {
-    if (!next()) throw std::runtime_error("Cannot read headers!");
+    if (!next()) {
+        throw FileHeaderError();
+    }
+
     auto headers_view = current_record().fields();
     headers_ = std::vector<std::string>(headers_view.begin(), headers_view.end());
 }
