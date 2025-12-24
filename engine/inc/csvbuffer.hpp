@@ -8,6 +8,8 @@
 #include <cstring>
 #include <stdexcept>
 
+#include <csverrors.hpp>
+
 namespace csv {
 
 enum class ReadingResult { ok, eof, buffer_full, fail };
@@ -36,7 +38,7 @@ class Buffer : public IBuffer {
             , data_(std::make_unique<char[]>(N))
         {
             if (!stream_->good()) {
-                throw std::runtime_error("Failed to open file: " + std::string(filename));
+                throw FileStreamError(filename);
             }
         }
 

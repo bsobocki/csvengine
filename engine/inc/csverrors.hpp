@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 namespace csv {
 
@@ -13,6 +14,14 @@ public:
 class FileHeaderError : public std::runtime_error {
 public:
     FileHeaderError(): std::runtime_error("There is a problem with reading headers, that should be available according to config!") {}
+}; 
+
+class FileStreamError : public std::runtime_error {
+public:
+    FileStreamError(const std::string& filename): std::runtime_error(msg + filename) {}
+    FileStreamError(const std::string_view& filename): std::runtime_error(msg + std::string(filename)) {}
+private:
+    std::string msg = "Stream failed for file: ";
 }; 
 
 }
