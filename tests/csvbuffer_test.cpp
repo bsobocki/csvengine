@@ -359,3 +359,20 @@ TEST(BufferTest, Buffer64_BinaryDataWithNullBytes) {
     EXPECT_EQ(buffer.available(), 8);
     EXPECT_EQ(buffer.view(), std::string_view(data));
 }
+
+TEST(BufferTest, ThrowsWhenFileDoesNotExist) {
+    EXPECT_THROW({
+        csv::make_buffer("/non_existent/path/to/file.csv");
+    }, csv::FileStreamError);
+}
+
+TEST(BufferTest, ThrowsOnInvalidIstream) {
+    auto ss = std::make_unique<std::istringstream>("");
+    
+    // force istream into a 'fail' state
+    ss->setstate(std::ios::failbit);
+
+    EXPECT_THROW({
+        csv::Buffer<1024> buffer(std::move(ss));
+    }, csv::FileStreamError);
+}
