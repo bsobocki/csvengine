@@ -132,3 +132,45 @@ TEST_F(ReaderTest, HeadersErrorOnInit) {
 
     EXPECT_THROW(Reader reader(std::move(mock_buffer)), FileHeaderError);
 }
+
+TEST_F(ReaderTest, RangeBasedLoop_IteratorBasicIteration) {
+    std::vector<std::vector<std::string>> all_records;
+    
+    for (const auto& record : simple_data_reader) {
+        all_records.push_back({record.fields().begin(), record.fields().end()});
+    }
+    
+    EXPECT_EQ(all_records.size(), 5);
+    EXPECT_EQ(all_records[0][0], "Ken Adams");
+    EXPECT_EQ(all_records[1][0], "Cristiano Ronaldo");
+    EXPECT_EQ(all_records[2][0], "Gunter Shmitt");
+    EXPECT_EQ(all_records[3][0], "Andrzej Kowalski");
+    EXPECT_EQ(all_records[4][0], "John Krasinski");
+}
+
+TEST_F(ReaderTest, IteratorEmptyFile) {
+    Config cfg{.has_header = true};
+    auto [reader, mock] = setup_reader(cfg);
+
+    EXPECT_CALL(*mock, empty()).WillOnce(Return(true));
+    EXPECT_CALL(*mock, refill()).WillOnce(Return(ReadingResult::eof));
+
+    int count = 0;
+    for (const auto& record : *reader) {
+        (void)record;
+        count++;
+    }
+    
+    EXPECT_EQ(count, 0);
+}
+
+TEST_F(ReaderTest, IteratorBeginEndEquality) {
+    Config cfg{.has_header = false};
+    auto [reader, mock] = setup_reader(cfg);
+
+    EXPECT_CALL(*mock, empty()).WillRepeatedly(Return(true));
+    EXPECT_CALL(*mock, refill()).WillRepeatedly(Return(ReadingResult::eof));
+
+    auto it = reader->begin();
+    EXPECT_FALSE(it != reader->end());
+}
