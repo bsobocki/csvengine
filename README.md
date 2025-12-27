@@ -117,11 +117,11 @@ Read a file row by row using C++ range-based for loops.
 
 int main() {
     try {
-        CSVReader reader("data.csv"); // Defaults: comma delimiter, has header
+        csv::Reader reader("data.csv"); // Defaults: comma delimiter, has header
 
-        for (const auto& row : reader) {
+        for (const auto& record : reader) {
             // Access raw string_view by index
-            std::cout << "Field 0: " << row[0] << "\n";
+            std::cout << "Field 0: " << record[0] << "\n";
         }
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";
@@ -133,13 +133,13 @@ int main() {
 Access data safely using types and header names.
 
 ```cpp
-CSVReader reader("employees.csv");
+csv::Reader reader("employees.csv");
 
-for (const auto& row : reader) {
+for (const auto& record : reader) {
     // get<T> returns std::optional<T>
-    auto name = row.get<std::string>("name");
-    auto age  = row.get<int>("age");
-    auto salary = row.get<double>("salary");
+    auto name = record.get<std::string>("name");
+    auto age  = record.get<int>("age");
+    auto salary = record.get<double>("salary");
 
     if (name && age) {
         std::cout << *name << " is " << *age << " years old.\n";
@@ -151,15 +151,15 @@ for (const auto& row : reader) {
 Handle TSV files or files without headers.
 
 ```cpp
-CSVConfig config;
+csv::Config config;
 config.delimiter = '\t';
 config.has_header = false;
 
-CSVReader reader("data.tsv", config);
+csv::Reader reader("data.tsv", config);
 
-for (const auto& row : reader) {
+for (const auto& record : reader) {
     // Since there are no headers, access by index
-    auto id = row.get<int>(0);
+    auto id = record.get<int>(0);
 }
 ```
 
@@ -187,13 +187,14 @@ csvengine/
 ├── CMakeLists.txt           # Main build configuration
 ├── README.md                # Documentation
 ├── SPECIFICATION.md         # Detailed technical requirements
+├── go.sh                    # Script for building and running code
 ├── engine/                  # Library Source Code
 │   ├── CMakeLists.txt
 │   ├── inc/                 # Public Headers
 │   │   ├── csvconfig.hpp
 │   │   ├── csvengine.hpp    # Main include file
 │   │   ├── csvreader.hpp
-│   │   └── csvrecord.hpp
+│   │   └── ...
 │   └── src/                 # Implementation
 ├── demo/                    # Usage examples
 │   └── main.cpp
