@@ -82,17 +82,17 @@
 
 ## 1.3 Constraints
 
-For each csv file with: $n \text{ rows} \times m \text{ columns}$
+**For each csv file with:** $\quad N \text{ rows} \times M \text{ columns}$
 
 ### Memory Usage (Phase 1)
 
-- Streaming mode: O(m) - single row in memory
-- Target: Parse 10GB file with <100MB RAM
+- Streaming mode: $O(M)$ - single row in memory
+- Target: Parse 10 GB file with < 100 MB RAM
 
 ### Memory Usage (Phase 2)
 
-- InMemory mode: $O(nm)$ - entire file in memory
-- Seekable mode: $O(m)$ - single row in memory - streaming
+- InMemory mode: $O(NM)$ - entire file in memory
+- Seekable mode: $O(M)$ - single row in memory - streaming
 
 ### Platform
 
@@ -140,19 +140,25 @@ For each csv file with: $n \text{ rows} \times m \text{ columns}$
 
 ### Settings *(to constant update/expanding)*:
 
-**Description**: Data structure that user can prepare and put into csvengine via CSVReader constructor.
+**Description**: *Data structure* that user can prepare and put into `csvengine` via `csv::Reader` constructor.
 
-**Structure**: A key-value map with properties names as keys and their values. Every property is optional.
+**Structure**: `csv::Config` structure defined in `csvconfig.hpp` header file.
 
 **Purpose**: This data structure will provide properties/settings like:
-- error handling
-- restrictions
-- [Phase 2] data schema (types for every column)
-- [Phase 2] data reading mode
+- error handling,
+- restrictions,
+- delimiter,
+- newline,
+- quoting,
+- header existence,
+- [Phase 2] data schema (types for every column),
+- [Phase 2] data reading mode.
 
 **Phase 1**: Config Class:
 ```cpp
-struct CSVConfig {
+namespace csv {
+
+struct Config {
     char delimiter = ',';
     bool has_header = true;
     bool has_quoting = true;
@@ -166,15 +172,17 @@ struct CSVConfig {
 
     bool is_line_ending(char ch) const;
 };
+
+}
 ```
 **Phase 2**:
 ```cpp
-struct CSVConfig {
+struct Config {
     /* Phase 1 fields */
     std::optional<Schema> dataSchema;
 
-    enum class DataReadingMode { streaming, inMemoryDatabase };
-    DataReadingMode dataReadingMode = DataReadingMode::streaming;
+    enum class ReadingMode { streaming, inMemoryDatabase };
+    ReadingMode dataReadingMode = ReadingMode::streaming;
 
     using ErrorHandlerCallback = std::function<void(size_t lineNum, const ParseError&)>;
     ErrorHandlerCallback onError;
@@ -182,7 +190,7 @@ struct CSVConfig {
 ```
 **Future**:
 ```cpp
-struct CSVConfig {
+struct Config {
     /* Phase 2 fields */
     std::string schemaFilePath;
 };
@@ -195,7 +203,7 @@ struct CSVConfig {
 **Input**: User can use filtering by creating and injecting:
 - filtering callback function for records filtering
 ```cpp
-CSVReader reader("data.csv")
+csv::Reader reader("data.csv")
     .withFilter([](const Row& row) {
         auto age = row.get<int>("age");
         auto name = row.get<std::string>("name");
@@ -390,11 +398,11 @@ delimiter/newline, not when `\n` appears inside quotes.
 - **Decision:** Phase 1: read chunk-by-chunk, Phase 2+: memory mapping for limited IO calls/operations
 
 **Decision: [Data Ownership vs Zero-Copy]**
-- **Context:** Should CSVRecord own the strings (safe) or view them (fast)?
+- **Context:** Should `csv::Record` own the strings (safe) or view them (fast)?
 - **Conflict:** "Zero-copy" requires views, but easy API requires ownership.
 - **Decision:**
-    - **Phase 1:** CSVRecord will own data (`std::vector<std::string>`). "Zero-copy" applies only to internal parsing (parsing the line to find delimiters without creating substrings), but the final record is copied.
-    - **Phase 2:** Introduce a specialized CSVView class that is strictly zero-copy (`std::vector<std::string_view>`) for advanced users who understand lifetime management.
+    - **Phase 1:** `csv::Record` will own data (`std::vector<std::string>`). "Zero-copy" applies only to internal parsing (parsing the line to find delimiters without creating substrings), but the final record is copied.
+    - **Phase 2:** Introduce a specialized `csv::View` class that is strictly zero-copy (`std::vector<std::string_view>`) for advanced users who understand lifetime management.
 
 **Decision: [Type Conversion Strategy]**
 - **Context:** How to convert string fields to numbers (int, double) efficiently?
@@ -406,21 +414,21 @@ delimiter/newline, not when `\n` appears inside quotes.
 - **Rationale:** Since we target C++20, we should use the most efficient standard tool. It allows us to parse numbers directly from the internal string storage without creating temporary string copies.
 
 **Decision: Multi-Pass Iterator Behavior**
-- **Context:** What happens when begin() is called after iteration completes?
+- **Context:** What happens when `begin()` is called after iteration completes?
 - **Options:**
-  - A) Throw exception on second begin()
-  - B) Return end() silently (input iterator semantics)
+  - A) Throw exception on second `begin()`
+  - B) Return `end()` silently (input iterator semantics)
   - C) Cache all rows in memory for multi-pass iteration
-  - D) Seek file back to start and re-parse on each begin()
+  - D) Seek file back to start and re-parse on each `begin()`
 - **Decision:** 
-  - **Phase 1:** Option B (return end() silently)
-    - Matches std::istream_iterator behavior
+  - **Phase 1:** Option B (return `end()` silently)
+    - Matches `std::istream_iterator` behavior
     - Simple, predictable, efficient
-    - Users collect to std::vector for multi-pass needs
+    - Users collect to `std::vector` for multi-pass needs
   - **Phase 2:** Add configurable ReadMode with three strategies:
     - `ReadMode::Streaming` (default) - Option B behavior
     - `ReadMode::InMemory` - Option C (load once, iterate many times)
-    - `ReadMode::Seekable` - Option D (re-parse on each begin())
+    - `ReadMode::Seekable` - Option D (re-parse on each `begin()`)
 - **Rationale:**
   - **Phase 1:** Start with standard C++ input iterator pattern
     - No surprises for experienced C++ developers
@@ -442,7 +450,7 @@ delimiter/newline, not when `\n` appears inside quotes.
 
 ### Restrictions:
 
-**MVP Limitation**: In phase 1 csvenginge doesn't provide any mechanism for respecting and managing restrictions.
+**MVP Limitation**: In phase 1 `csvengine` doesn't provide any mechanism for respecting and managing restrictions.
 
 **Description**: Restriction mechanism (Phase 2+) will provide a more database-like workflow for values in CSV files.
 
@@ -474,7 +482,7 @@ id ${not_null},age${positives_only},...
 
 **Example Code:**
 ```cpp
-CSVReader reader("temps.csv", CSVConfig{.has_header = false});
+csv::Reader reader("temps.csv", csv::Config{.has_header = false});
 for (const auto& row : reader) {
     auto timestamp = row.get<std::string>(0);
     auto temp = row.get<double>(1);
@@ -498,7 +506,7 @@ for (const auto& row : reader) {
 
 **Example Code:**
 ```cpp
-CSVReader reader("employees.csv"); // has_header defaults to true
+csv::Reader reader("employees.csv"); // has_header defaults to true
 
 for (const auto& row : reader) {
     auto name = row.getstd::string("name");
@@ -529,7 +537,7 @@ for (const auto& row : reader) {
 // John,"123 Main St, Apt 4"
 // Jane,"456 Elm St, Suite 200"
 
-CSVReader reader("addresses.csv");
+csv::Reader reader("addresses.csv");
 for (const auto& row : reader) {
     auto name = row.getstd::string("name");
     auto addr = row.getstd::string("address");
@@ -551,7 +559,7 @@ for (const auto& row : reader) {
 
 **Example Code:**
 ```cpp
-CSVReader reader("access.log", CSVConfig{
+csv::Reader reader("access.log", csv::Config{
     .delimiter = '\t',
     .has_header = false
 });
@@ -577,11 +585,11 @@ for (const auto& row : reader) {
 **Example Code:**
 ```cpp
 try {
-    CSVReader reader("broken.csv");
+    csv::Reader reader("broken.csv");
     for (const auto& row : reader) {
     // ...
     }
-} catch (const CSVParseError& e) {
+} catch (const csv::ParseError& e) {
     std::cerr << "Error at line " << e.line()
     << ", column " << e.column()
     << ": " << e.what() << "\n";
@@ -605,7 +613,7 @@ try {
 // Bob,,LA
 // Carol,25,
 
-CSVReader reader("data.csv");
+csv::Reader reader("data.csv");
 for (const auto& row : reader) {
     auto name = row.getstd::string("name");
     auto age = row.get<int>("age"); // may be nullopt
@@ -632,7 +640,7 @@ for (const auto& row : reader) {
 
 **Example Code:**
 ```cpp
-CSVReader reader("huge.csv"); // Only reads current row
+csv::Reader reader("huge.csv"); // Only reads current row
 
 size_t count = 0;
 for (const auto& row : reader) {
@@ -656,7 +664,7 @@ std::cout << "Processed " << count << " rows\n";
 
 **Example Code:**
 ```cpp
-CSVReader reader("sales.csv", CSVConfig{
+csv::Reader reader("sales.csv", csv::Config{
     .read_mode = ReadMode::InMemory
 });
 
@@ -684,7 +692,7 @@ for (const auto& row : reader) { // Works!
 
 ## 4.1 Core Classes
 
-**Class: [CSVReader]**
+**Class: [csv::Reader]**
 
 **Purpose:** Entry point for parsing CSV files with streaming iteration
 
@@ -694,21 +702,23 @@ for (const auto& row : reader) { // Works!
 - Tokenize rows respecting quotes/delimiters
 - Provide iterator interface
 - Track line/column for errors
-- **Collaborators:** CSVConfig, CSVRecord, CSVParseError, CSVReadError
+- **Collaborators:** Config, Record, ParseError, ReadError
 
 **Design:**
 ```cpp
-class CSVReader {
+namespace csv {
+
+class Reader {
 public:
     // Construction & Configuration
-    explicit CSVReader(const std::string& filePath, const CSVConfig = {});
+    explicit Reader(const std::string& filePath, const Config = {});
 
     // No copy (owns file handle)
-    CSVReader(const CSVReader&) = delete;
-    CSVReader& operator=(const CSVReader&) = delete;
+    Reader(const Reader&) = delete;
+    Reader& operator=(const Reader&) = delete;
     // Move-only
-    CSVReader(CSVReader&&) noexcept = default;
-    CSVReader& operator=(CSVReader&&) noexcept = default;
+    Reader(Reader&&) noexcept = default;
+    Reader& operator=(Reader&&) noexcept = default;
 
     bool good() const;
     bool hasHeader() const;
@@ -716,50 +726,54 @@ public:
     explicit operator bool() const; // return good()
 
     // getters
-    CSVConfig getConfig() const;
-    CSVRecord currentRecord() const;
-    std::optional<CSVRecord> nextRecord();
+    Config getConfig() const;
+    Record currentRecord() const;
+    std::optional<Record> nextRecord();
     const std::vector<std::string>& headers() const;
     
-    class CSVIterator;
-    CSVIterator begin();
-    CSVIterator end(); 
+    class Iterator;
+    Iterator begin();
+    Iterator end(); 
 
 private:
-    friend class CSVIterator;
+    friend class Iterator;
 
-    CSVRecord currentRecord;
+    Record currentRecord;
     int currentRecordIndex = -1;
 
     std::ifstream csvFile;
-    const CSVConfig config;
+    const Config config;
     std::vector<std::string> columnNames;
 };
+
+}
 ```
 
-**Class: [CSVRecord]**
+**Class: [csv::Record]**
 
 **Purpose:** A record that stores fields as std::string and convert on demand
 
 **Responsibilities:**
 - stores fields of current record
 - random access of fields
-- access to field by its column name (only when CSVReader exists or schema is provided)
+- access to field by its column name (only when csv::Reader exists or schema is provided)
 
 **Design:**
 ```cpp
-class CSVRecord {
+namespace csv {
+
+class Record {
 public:
     using ColumnIndexMap = std::unordered_map<std::string, size_t>;
 
-    explicit CSVRecord(const size_t fieldCount);
-    CSVRecord(const std::vector<std::string> fields,
+    explicit Record(const size_t fieldCount);
+    Record(const std::vector<std::string> fields,
              std::shared_ptr<const ColumnIndexMap> columnMap = nullptr);
 
-    CSVRecord(const CSVRecord&) = default;
-    CSVRecord(CSVRecord&&) noexcept = default;
-    CSVRecord& operator=(const CSVRecord&) = default;
-    CSVRecord& operator=(CSVRecord&&) noexcept = default;
+    Record(const Record&) = default;
+    Record(Record&&) noexcept = default;
+    Record& operator=(const Record&) = default;
+    Record& operator=(Record&&) noexcept = default;
 
     template<typename T = std::string>
     std::optional<T> get(const size_t index) const;
@@ -778,6 +792,8 @@ private:
     std::vector<std::string> fields; // fields as strings
     std::shared_ptr<const ColumnIndexMap> columnMap; // for mapping name to index - more memory, but O(1) lookup
 };
+
+}
 ```
 
 
@@ -818,37 +834,41 @@ private:
 
 ## 5.2 Component Details
 
-**Component: [CSVIterator]**
+**Component: [`csv::Iterator`]**
 
 **Responsibility:** Iterates through csv data only forward.
 
-**Dependencies:** CSVReader state.
+**Dependencies:** `csv::Reader` state.
 
 **Design:**
 ```cpp
-class CSVReader {
+namespace csv {
+
+class Reader {
 // ...
 
 public:
-    class CSVIterator {
+    class Iterator {
         public:
             // Iterator Traits (Required for STL compatibility)
             using iterator_category = std::input_iterator_tag;
-            using value_type        = CSVRecord;
+            using value_type        = Record;
             using difference_type   = std::ptrdiff_t;
-            using pointer           = const CSVRecord*;
-            using reference         = const CSVRecord&;
+            using pointer           = const Record*;
+            using reference         = const Record&;
 
-            explicit CSVIterator(CSVReader* reader);
-            CSVIterator& operator++();
-            const CSVRecord& operator*() const;
-            bool operator!=(const CSVIterator& other) const;
+            explicit Iterator(Reader* reader);
+            Iterator& operator++();
+            const Record& operator*() const;
+            bool operator!=(const Iterator& other) const;
         
         private:
-            CSVReader* _reader;
+            Reader* _reader;
     };
 
 // ...
+};
+
 }
 ```
 
@@ -864,22 +884,22 @@ public:
 [User Code]
      │ calls nextRecord()
      ▼
-[CSVReader] ◄──────────────────────────────────────────────┐
+[csv::Reader] ◄──────────────────────────────────────────────┐
      │ 1. Is buffer low? ──┤Yes├──► [Read from File]       │
      │ 2. Create view of buffer                            │
      │ 3. Call parser.parse_chunk(view)                    │
      ▼                                                     │
-[CSVParser]                                                │
+[csv::Parser]                                                │
      │ 1. Scan characters (State Machine)                  │
      │ 2. Handle Quotes / Escapes                          │
      │ 3. Return ParseResult                               │
      │    { Status, BytesConsumed, Fields }                │
      ▼                                                     │
-[CSVReader]                                                │
+[csv::Reader]                                                │
      │ Status == NeedMoreData? ────────────────────────────┘
      │ Status == RecordFound?
      ▼
-[CSVRecord] (Constructed & Returned)
+[csv::Record] (Constructed & Returned)
 ```
 
 ## 5.4: High-Performance Circular Buffer Management
@@ -976,10 +996,12 @@ Next:   [e",25,...]           <- Start of next buffer
 ### API Design
 
 ```cpp
+namespace csv {
+
 template <size_t N = 65536> // 64KB default
-class CsvBuffer {
+class Buffer {
     public:
-        explicit CsvBuffer(const std::string_view filename);
+        explicit Buffer(const std::string_view filename);
 
         enum class ReadingResult {ok, eof, fail};
 
@@ -1016,6 +1038,8 @@ class CsvBuffer {
         std::unique_ptr<char[]> data_;
         const size_t capacity_ = N;
 };
+
+}
 ```
 
 ### Usage Examples:
@@ -1280,7 +1304,7 @@ Eliminate heap allocations (`malloc`/`new`) entirely during the parse loop.
 
 **Implementation Plan:**
 - **Memory Mapping:** Use `mmap` (Linux) / `CreateFileMapping` (Windows) to map the file directly into virtual address space.
-- **Arena Allocator:** Implement a monotonic (bump) allocator. `CSVRecord` fields will point directly into the memory-mapped region.
+- **Arena Allocator:** Implement a monotonic (bump) allocator. `csv::Record` fields will point directly into the memory-mapped region.
 - **Data Lifecycle:** The parser does not copy bytes to create `std::string` or `std::string_view`. It returns pointers to the OS page cache.
 - **Mutation:** If "unescaping" quotes is needed, perform in-place modification within a write-copy private page or a dedicated scratchpad arena, never a generic heap allocation.
 
@@ -1304,7 +1328,7 @@ using TradeSchema = Schema<
 >;
 
 // Compiler generates optimized assembly specifically for this layout
-auto reader = CSVReader<TradeSchema>("trades.csv");
+auto reader = csv::Reader<TradeSchema>("trades.csv");
 
 for (const auto& [id, symbol, price] : reader) {
     // No runtime type checks, no string lookups. 
