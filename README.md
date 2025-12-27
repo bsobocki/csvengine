@@ -8,7 +8,7 @@
 **High-performance C++20 CSV parser with streaming and type-safe conversions.**
 
 <p align="center">
-<img src="docs/logo.png" />
+<img src="docs/logo.png" height="200"/>
 </p>
 
 `csvengine` is a modern C++ library designed to parse RFC 4180 compliant CSV files efficiently. It focuses on low memory usage (streaming mode), ease of integration (header-only style architecture), and type safety.
