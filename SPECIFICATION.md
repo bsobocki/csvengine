@@ -198,21 +198,21 @@ struct Config {
 
 ### On-read Filtering
 
-**Description**: With this feature data can be filtered by using filtering options (Phase 2+). User will be able to define filtering function (or rule in the future) for each row.
-**Dependencies**: Filtering can be done only when schema is known and validated - without clear types we cannot compare or check data.
+**Description**: With this feature data can be filtered by using filtering options (Phase 2+). User will be able to define filtering function (or rule in the future) for each row.\
+**Dependencies**: Filtering can be done only when schema is known and validated - without clear types we cannot compare or check data.\
 **Input**: User can use filtering by creating and injecting:
 - filtering callback function for records filtering
 ```cpp
 csv::Reader reader("data.csv")
-    .withFilter([](const Row& row) {
-        auto age = row.get<int>("age");
-        auto name = row.get<std::string>("name");
+    .withFilter([](const Record& record) {
+        auto age = record.get<int>("age");
+        auto name = record.get<std::string>("name");
         bool validData = age && name && name.length() > 0;
         return validData && *age > 25 && name.front() == 'A';
     });
 
-for (const auto& row : reader) {
-    // Only rows passing filter
+for (const auto& record : reader) {
+    // Only records passing filter
 }
 ```
 - filtering callback function for fields (for specific column with data type check if function returns true)
@@ -371,11 +371,15 @@ delimiter/newline, not when `\n` appears inside quotes.
 
 **Decision: [Quote Handling]**
 - **Context:** What happens when start quotes appear mid-field?
-- **Decision:** Treat as literals unless at field start
+- **Decision:** 
+    - [Strict] Error
+    - [Lenient] Treat as literals unless at field start
 
 **Decision: [Quote Handling]**
 - **Context:** What happens when end quotes appear mid-field?
-- **Decision:** Treat as literals unless at field end
+- **Decision:**
+    - [Strict] Error
+    - [Lenient] Treat as literals unless at field end
 
 **Decision: [Empty Row Behavior]**
 - **Context:** How to handle blank lines in CSV?
@@ -383,7 +387,7 @@ delimiter/newline, not when `\n` appears inside quotes.
 
 **Decision: [Field Count Mismatch]**
 - **Context:** Row has wrong number of fields
-- **Decision:** Error on wrong number of fields (silent)
+- **Decision:** Error on wrong number of fields
 
 **Decision: [Memory Strategy]**
 - **Context:** Streaming vs in-memory
@@ -394,7 +398,7 @@ delimiter/newline, not when `\n` appears inside quotes.
 - **Decision:** No whitespace except `\t`
 
 **Decision: [Reading Strategy]**
-- **Context:** 
+- **Context:** How engine will read data to optimize reading process?
 - **Decision:** Phase 1: read chunk-by-chunk, Phase 2+: memory mapping for limited IO calls/operations
 
 **Decision: [Data Ownership vs Zero-Copy]**
