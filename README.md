@@ -7,6 +7,10 @@
 
 **High-performance C++20 CSV parser with streaming and type-safe conversions.**
 
+<p align="center">
+<img src="docs/logo.png" />
+</p>
+
 `csvengine` is a modern C++ library designed to parse RFC 4180 compliant CSV files efficiently. It focuses on low memory usage (streaming mode), ease of integration (header-only style architecture), and type safety.
 
 ---
@@ -53,20 +57,23 @@ This project does not allow in-source builds. You must create a build directory.
 
 ### 1. Clone
 ```bash
-git clone <repository-url>
+git clone https://github.com/bsobocki/csvengine.git
 cd csvengine
 ```
 
-### 2. Configure
+### 2. Configure & Build
 ```bash
-mkdir build
-cd build
-cmake ..
+./go.sh build
 ```
 
-### 3. Build
+### 3. Run Tests
 ```bash
-cmake --build .
+./go.sh tests
+```
+
+### 4. Run Demo
+```bash
+./go.sh demo
 ```
 
 ---
@@ -81,6 +88,8 @@ cd build
 ctest --output-on-failure
 # OR directly:
 ./tests/run_tests
+# OR using script
+./go.sh tests
 ```
 
 ### Running the Demo
@@ -89,6 +98,8 @@ A sample application is provided in the `demo` folder.
 ```bash
 cd build
 ./demo/csvengine_demo
+# OR using script
+./go.sh demo
 ```
 
 ---
@@ -187,24 +198,6 @@ csvengine/
 └── tests/                   # Unit Tests (GoogleTest)
     └── tests.cpp
 ```
-
----
-
-## Roadmap
-
-Refer to `SPECIFICATION.md` for the detailed technical breakdown.
-
-### Phase 1 (MVP - Current Focus)
-- [ ] Core CSV Parsing Logic (State Machine)
-- [ ] Quote handling (embedded commas/newlines)
-- [ ] Iterator implementation
-- [ ] Basic type conversion
-
-### Phase 2 (Planned)
-- [ ] In-Memory mode (random access)
-- [ ] Custom Schema Validation
-- [ ] Performance benchmarks
-- [ ] Statistics (min/max/count)
 
 ---
 
