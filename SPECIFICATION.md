@@ -82,15 +82,17 @@
 
 ## 1.3 Constraints
 
+For each csv file with: $n \text{ rows} \times m \text{ columns}$
+
 ### Memory Usage (Phase 1)
 
-- Streaming mode: O(1) - single row in memory
+- Streaming mode: O(m) - single row in memory
 - Target: Parse 10GB file with <100MB RAM
 
 ### Memory Usage (Phase 2)
 
-- InMemory mode: $O(nm)$ - entire file in memory ( $n \text{ rows} \times m \text{ columns}$ )
-- Seekable mode: $O(m)$ - single row in memory
+- InMemory mode: $O(nm)$ - entire file in memory
+- Seekable mode: $O(m)$ - single row in memory - streaming
 
 ### Platform
 
@@ -153,9 +155,16 @@
 struct CSVConfig {
     char delimiter = ',';
     bool has_header = true;
+    bool has_quoting = true;
+    char quote_char = '\"';
+
     enum class ParseMode { strict, lenient };
-    ParseMode errorHandlerMode = ParseMode::strict;
-    enum class LineEnding { Auto, LF, CRLF, CR }
+    ParseMode parse_mode = ParseMode::strict;
+
+    enum class LineEnding { Auto, LF, CRLF, CR };
+    LineEnding line_ending = LineEnding::Auto;
+
+    bool is_line_ending(char ch) const;
 };
 ```
 **Phase 2**:
