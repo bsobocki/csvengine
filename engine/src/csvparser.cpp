@@ -160,7 +160,7 @@ Parser::ParseStatus Parser::csv_quotes_strict_parse(std::string_view buffer) {
                     }
                 }
                 // end, so we need to mark field as incomplete and show that the last char was quote
-                // if the first character of the next buffer will be also qyote then we will have just literal
+                // if the first character of the next buffer will be also quote then we will have just literal
                 else {
                     // Quote at buffer end
                     add_field(buff_it);  // Add field without closing quote

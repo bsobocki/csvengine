@@ -48,6 +48,7 @@ void Reader::read_headers() {
     }
 
     auto headers_view = current_record().fields();
+    record_size_ = headers_view.size();
     headers_ = std::vector<std::string>(headers_view.begin(), headers_view.end());
 }
 
@@ -63,6 +64,9 @@ bool Reader::next() {
 
                 if (!fields.empty()) {
                     current_record_ = Record(std::move(fields));
+                    if (record_size_ == 0) {
+                        record_size_ = current_record_.fields().size();
+                    }
                     return true;
                 }
                 return false;
@@ -79,6 +83,9 @@ bool Reader::next() {
 
         if (result == Parser::ParseStatus::complete) {
             current_record_ = Record(parser_.move_fields());
+            if (record_size_ == 0) {
+                record_size_ = current_record_.fields().size();
+            }
             return true;
         }
 
@@ -129,6 +136,10 @@ bool Reader::has_header() const {
 
 std::size_t Reader::line_number () const {
     return current_record_idx_ + 1;
+}
+
+std::size_t Reader::record_size() const {
+    return record_size_;
 }
 
 Reader::operator bool() const {

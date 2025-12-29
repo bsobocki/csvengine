@@ -43,7 +43,8 @@ public:
 
     bool good() const;
     bool has_header() const;
-    std::size_t line_number () const;
+    std::size_t line_number() const;
+    std::size_t record_size() const;
     explicit operator bool() const;
 
     // getters
@@ -85,7 +86,8 @@ private:
     friend class Iterator;
 
     Record current_record_;
-    long long current_record_idx_ = -1;
+    long long current_record_idx_ = 0;
+    long long record_size_ = -1;
 
     std::string csv_file_path_;
     std::unique_ptr<IBuffer> buffer_;
