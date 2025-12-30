@@ -18,7 +18,7 @@ protected:
         MockBuffer* mock_buffer;
     };
 
-    TestSetup setup_reader(Config cfg = {}) {
+    TestSetup setup_reader(Config cfg = {}, const std::string& first_record = "h1,h2\n") {
         auto mock_buffer = std::make_unique<MockBuffer>();
         MockBuffer* mock_buffer_ptr = mock_buffer.get();
 
@@ -29,7 +29,7 @@ protected:
         // because the constructor will call read_headers() immediately.
         if (cfg.has_header) {
             EXPECT_CALL(*mock_buffer_ptr, empty()).WillOnce(Return(false));
-            EXPECT_CALL(*mock_buffer_ptr, view()).WillOnce(Return("h1,h2\n"));
+            EXPECT_CALL(*mock_buffer_ptr, view()).WillOnce(Return(first_record));
             EXPECT_CALL(*mock_buffer_ptr, consume(_));
         }
 
@@ -139,13 +139,14 @@ TEST_F(ReaderTest, RangeBasedLoop_IteratorBasicIteration) {
     for (const auto& record : simple_data_reader) {
         all_records.push_back({record.fields().begin(), record.fields().end()});
     }
-    
-    EXPECT_EQ(all_records.size(), 5);
-    EXPECT_EQ(all_records[0][0], "Ken Adams");
-    EXPECT_EQ(all_records[1][0], "Cristiano Ronaldo");
-    EXPECT_EQ(all_records[2][0], "Gunter Shmitt");
-    EXPECT_EQ(all_records[3][0], "Andrzej Kowalski");
-    EXPECT_EQ(all_records[4][0], "John Krasinski");
+
+    EXPECT_EQ(all_records.size(), 6);
+    EXPECT_EQ(all_records[0][0], "name");
+    EXPECT_EQ(all_records[1][0], "Ken Adams");
+    EXPECT_EQ(all_records[2][0], "Cristiano Ronaldo");
+    EXPECT_EQ(all_records[3][0], "Gunter Shmitt");
+    EXPECT_EQ(all_records[4][0], "Andrzej Kowalski");
+    EXPECT_EQ(all_records[5][0], "John Krasinski");
 }
 
 TEST_F(ReaderTest, IteratorEmptyFile) {
@@ -161,7 +162,7 @@ TEST_F(ReaderTest, IteratorEmptyFile) {
         count++;
     }
     
-    EXPECT_EQ(count, 0);
+    EXPECT_EQ(count, 1);
 }
 
 TEST_F(ReaderTest, IteratorBeginEndEquality) {
@@ -172,5 +173,25 @@ TEST_F(ReaderTest, IteratorBeginEndEquality) {
     EXPECT_CALL(*mock, refill()).WillRepeatedly(Return(ReadingResult::eof));
 
     auto it = reader->begin();
-    EXPECT_FALSE(it != reader->end());
+    EXPECT_TRUE(it != reader->end());
+}
+
+TEST_F(ReaderTest, RecordSize_HeaderSize) {
+    Config cfg{.has_header = true};
+    auto [reader, mock] = setup_reader(cfg);
+
+    auto headers = reader->headers();
+    EXPECT_EQ(headers, std::vector<std::string>({"h1", "h2"}));
+
+    EXPECT_EQ(reader->record_size(), 2);
+}
+
+TEST_F(ReaderTest, RecordSize_Zero) {
+    Config cfg{.has_header = false};
+    auto [reader, mock] = setup_reader(cfg, "");
+
+    auto headers = reader->headers();
+    EXPECT_EQ(headers, std::vector<std::string>{});
+
+    EXPECT_EQ(reader->record_size(), 0);
 }

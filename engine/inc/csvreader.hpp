@@ -87,7 +87,7 @@ private:
 
     Record current_record_;
     long long current_record_idx_ = 0;
-    long long record_size_ = -1;
+    size_t record_size_ = 0;
 
     std::string csv_file_path_;
     std::unique_ptr<IBuffer> buffer_;
