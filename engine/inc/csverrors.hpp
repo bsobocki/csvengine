@@ -43,4 +43,8 @@ public:
             " at line " + std::to_string(line_number)) {}
 };
 
+class ConfigError : public std::runtime_error {
+public:
+    ConfigError(const std::string& msg): std::runtime_error(msg) {}
+};
 }
