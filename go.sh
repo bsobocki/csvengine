@@ -67,6 +67,22 @@ function do_tests() {
   fi
 }
 
+function do_run_tests() {
+  executable="./build/tests/run_tests"
+  if [ -f $executable ]; then
+    echo "Running tests..."
+    cd build/tests
+    ./run_tests
+  else
+    echoError "Executable $executable not found. Did you build first?"
+    echo "Run"
+    echo ""
+    echo "   ./go.sh build tests"
+    echo ""
+    echo "to build and run tests."
+  fi
+}
+
 while [[ $# -gt 0 ]]; do
   case $1 in
     -c|--clean|clean)
@@ -87,6 +103,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     -t|--tests|tests)
       do_tests
+      ;;
+    -rt|--run_tests|run_tests)
+      do_run_tests
       ;;
     -a|--all|all)
       do_clean
