@@ -85,19 +85,18 @@ TEST_F(ReaderTest, ReadQuotingHeaders) {
 
 // -- Buffer Mock
 
-TEST_F(ReaderTest, NextReturnsFalseWhenDataIsOnlyHeaders_CurrentRecordHasHeaders) {
+TEST_F(ReaderTest, NextReturnsFalseWhenDataIsOnlyHeaders_CurrentRecordIsEmpty) {
     Config cfg{.has_header = true};
     auto [reader, mock] = setup_reader(cfg);
 
+    EXPECT_EQ(reader->headers(), std::vector<std::string>({"h1", "h2"}));
+
     // Specific expectations for this test
-    // EXPECT_CALL(*mock, empty()).WillOnce(Return(true));
-    // EXPECT_CALL(*mock, refill()).WillOnce(Return(ReadingResult::eof));
+    EXPECT_CALL(*mock, empty()).WillOnce(Return(true));
+    EXPECT_CALL(*mock, refill()).WillOnce(Return(ReadingResult::eof));
 
-    // EXPECT_EQ(reader->headers(), std::vector<std::string>({"h1", "h2"}));
-
-    // EXPECT_FALSE(reader->next());
-    
-    //EXPECT_EQ(reader->current_record().fields(), std::vector<std::string>({"h1", "h2"}));
+    EXPECT_FALSE(reader->next());
+    EXPECT_EQ(reader->current_record().fields(), std::vector<std::string>({}));
 }
 
 TEST_F(ReaderTest, NextReturnsTrueWhenDataAvailable) {
@@ -194,4 +193,20 @@ TEST_F(ReaderTest, RecordSize_Zero) {
     EXPECT_EQ(headers, std::vector<std::string>{});
 
     EXPECT_EQ(reader->record_size(), 0);
+}
+
+TEST_F(ReaderTest, RecordSize_DifferentRecordSizes) {
+    Config cfg{.has_header = true};
+    auto [reader, mock] = setup_reader(cfg);
+
+    auto headers = reader->headers();
+    EXPECT_EQ(headers, std::vector<std::string>({"h1", "h2"}));
+
+    EXPECT_EQ(reader->record_size(), 2);
+
+    EXPECT_CALL(*mock, empty()).WillOnce(Return(false));
+    EXPECT_CALL(*mock, view()).WillOnce(Return("val1,val2,val3\n"));
+    EXPECT_CALL(*mock, consume(_));
+
+    EXPECT_THROW(reader->next(), csv::RecordSizeError);
 }

@@ -60,11 +60,14 @@ bool Reader::next() {
     parser_.reset();
 
     auto save_record = [&](std::vector<std::string>&& fields) {
-        current_record_ = Record(std::move(fields));
-        line_number_++;
         if (record_size_ == 0) {
-            record_size_ = current_record_.size();
+            record_size_ = fields.size();
         }
+        else if (!isRecordSizeValid(fields.size())) {
+            throw RecordSizeError();
+        }
+        current_record_ = Record(fields);
+        line_number_++;
     };
 
     while (true) {
@@ -146,6 +149,20 @@ std::size_t Reader::line_number () const {
 
 std::size_t Reader::record_size() const {
     return record_size_;
+}
+
+bool Reader::isRecordSizeValid(size_t record_size) const {
+    auto policy = config_.record_size_policy;
+
+    if (policy == Config::RecordSizePolicy::flexible) return true;
+
+    if (policy == Config::RecordSizePolicy::strict_to_first ||
+        policy == Config::RecordSizePolicy::strict_to_header)
+    {
+        return record_size == record_size_;
+    }
+
+    return record_size == config_.record_size;
 }
 
 Reader::operator bool() const {
