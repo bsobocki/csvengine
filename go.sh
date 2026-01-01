@@ -98,7 +98,9 @@ while [[ $# -gt 0 ]]; do
       do_run
       ;;
     --rebuild|rebuild)
-      do_clean
+      if [ -f $executable ]; then
+        do_clean
+      fi
       do_build
       ;;
     -t|--tests|tests)
