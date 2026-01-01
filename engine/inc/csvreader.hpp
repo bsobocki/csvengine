@@ -86,7 +86,7 @@ private:
     friend class Iterator;
 
     Record current_record_;
-    long long current_record_idx_ = 0;
+    long long line_number_ = 0;
     size_t record_size_ = 0;
 
     std::string csv_file_path_;

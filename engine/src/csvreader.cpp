@@ -47,13 +47,22 @@ void Reader::read_headers() {
         throw FileHeaderError();
     }
 
-    auto headers_view = current_record().fields();
-    record_size_ = headers_view.size();
-    headers_ = std::vector<std::string>(headers_view.begin(), headers_view.end());
+    auto headers = current_record().fields();
+    record_size_ = headers.size();
+    headers_ = std::vector<std::string>(headers.begin(), headers.end());
+    line_number_ = 0;
 }
 
 bool Reader::next() {
     parser_.reset();
+
+    auto save_record = [&](std::vector<std::string>&& fields) {
+        current_record_ = Record(std::move(fields));
+        line_number_++;
+        if (record_size_ == 0) {
+            record_size_ = current_record_.fields().size();
+        }
+    };
 
     while (true) {
         if (buffer_->empty()) {
@@ -63,10 +72,7 @@ bool Reader::next() {
                 auto fields = parser_.move_fields();
 
                 if (!fields.empty()) {
-                    current_record_ = Record(std::move(fields));
-                    if (record_size_ == 0) {
-                        record_size_ = current_record_.fields().size();
-                    }
+                    save_record(std::move(fields));
                     return true;
                 }
                 return false;
@@ -82,10 +88,7 @@ bool Reader::next() {
         buffer_->consume(parser_.consumed());
 
         if (result == Parser::ParseStatus::complete) {
-            current_record_ = Record(parser_.move_fields());
-            if (record_size_ == 0) {
-                record_size_ = current_record_.fields().size();
-            }
+            save_record(parser_.move_fields());
             return true;
         }
 
@@ -135,7 +138,7 @@ bool Reader::has_header() const {
 }
 
 std::size_t Reader::line_number () const {
-    return current_record_idx_ + 1;
+    return line_number_;
 }
 
 std::size_t Reader::record_size() const {
