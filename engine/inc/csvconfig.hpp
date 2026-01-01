@@ -11,8 +11,8 @@ struct Config {
     enum class ParseMode { strict, lenient };
     ParseMode parse_mode = ParseMode::strict;
 
-    enum class LineEnding { auto, lf, crlf, cr };
-    LineEnding line_ending = LineEnding::auto;
+    enum class LineEnding { lf, crlf, cr };
+    LineEnding line_ending = LineEnding::crlf;
 
     enum class RecordSizePolicy {
         flexible,          // Allow any size (default for compatibility)
@@ -21,10 +21,10 @@ struct Config {
         strict_to_value    // User specifies expected size
     };
     RecordSizePolicy record_size_policy = RecordSizePolicy::strict_to_first;
+    size_t record_size = 0; // Value used to specify expected size
 
     bool is_line_ending(char ch) const {
         switch (line_ending) {
-            case LineEnding::auto:
             case LineEnding::crlf:
                 return ch == '\n' || ch == '\r';
             case LineEnding::lf:
