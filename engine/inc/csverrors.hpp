@@ -25,4 +25,11 @@ private:
     std::string msg = "Stream failed";
 }; 
 
+class RecordError : public std::runtime_error {
+public:
+    RecordError(): std::runtime_error(msg) {}
+private:
+    std::string msg = "Cannot read record.";
+}; 
+
 }
