@@ -82,7 +82,7 @@ public:
 private:
     void read_headers();
     void init();
-    bool isRecordSizeValid(size_t record_size) const;
+    size_t expected_record_size(size_t record_size) const;
 
     friend class Iterator;
 

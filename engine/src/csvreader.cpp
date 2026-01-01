@@ -63,8 +63,11 @@ bool Reader::next() {
         if (record_size_ == 0) {
             record_size_ = fields.size();
         }
-        else if (!isRecordSizeValid(fields.size())) {
-            throw RecordSizeError();
+        else {
+            auto expected_size = expected_record_size(fields.size());
+            if (expected_size != fields.size()) {
+                throw RecordSizeError(line_number_, expected_size, fields.size());
+            }
         }
         current_record_ = Record(fields);
         line_number_++;
@@ -151,18 +154,18 @@ std::size_t Reader::record_size() const {
     return record_size_;
 }
 
-bool Reader::isRecordSizeValid(size_t record_size) const {
+size_t Reader::expected_record_size(size_t record_size) const {
     auto policy = config_.record_size_policy;
 
-    if (policy == Config::RecordSizePolicy::flexible) return true;
+    if (policy == Config::RecordSizePolicy::flexible) return record_size;
 
     if (policy == Config::RecordSizePolicy::strict_to_first ||
         policy == Config::RecordSizePolicy::strict_to_header)
     {
-        return record_size == record_size_;
+        return record_size_;
     }
 
-    return record_size == config_.record_size;
+    return config_.record_size;
 }
 
 Reader::operator bool() const {
