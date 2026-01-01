@@ -23,13 +23,20 @@ public:
     FileStreamError(const std::string_view& filename): std::runtime_error(msg + " for file: " + std::string(filename)) {}
 private:
     std::string msg = "Stream failed";
-}; 
+};
 
 class RecordError : public std::runtime_error {
 public:
     RecordError(): std::runtime_error(msg) {}
 private:
     std::string msg = "Cannot read record.";
-}; 
+};
+
+class RecordSizeError : public std::runtime_error {
+public:
+    RecordSizeError(): std::runtime_error(msg) {}
+private:
+    std::string msg = "Unexpected record size.";
+};
 
 }
