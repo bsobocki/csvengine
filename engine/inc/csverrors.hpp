@@ -18,25 +18,19 @@ public:
 
 class FileStreamError : public std::runtime_error {
 public:
-    FileStreamError(): std::runtime_error(msg) {}
-    FileStreamError(const std::string& filename): std::runtime_error(msg + " for file: " + filename) {}
-    FileStreamError(const std::string_view& filename): std::runtime_error(msg + " for file: " + std::string(filename)) {}
-private:
-    std::string msg = "Stream failed";
+    FileStreamError(): std::runtime_error("Stream failed") {}
+    FileStreamError(const std::string& filename): std::runtime_error("Stream failed for file: " + filename) {}
+    FileStreamError(const std::string_view& filename): std::runtime_error("Stream failed for file: " + std::string(filename)) {}
 };
 
 class RecordDataError : public std::runtime_error {
 public:
-    RecordDataError(): std::runtime_error(msg) {}
-private:
-    std::string msg = "Cannot read record.";
+    RecordDataError(): std::runtime_error("Cannot read record.") {}
 };
 
 class RecordSizeError : public std::runtime_error {
 public:
-    RecordSizeError(): std::runtime_error(msg) {}
-private:
-    std::string msg = "Unexpected record size.";
+    RecordSizeError(): std::runtime_error("Unexpected record size.") {}
 };
 
 }
