@@ -47,7 +47,7 @@ void Reader::read_headers() {
         throw FileHeaderError();
     }
 
-    auto headers = current_record().fields();
+    auto headers = current_record_.fields();
     record_size_ = headers.size();
     headers_ = std::vector<std::string>(headers.begin(), headers.end());
     line_number_ = 0;
@@ -60,7 +60,7 @@ bool Reader::next() {
         current_record_ = Record(std::move(fields));
         line_number_++;
         if (record_size_ == 0) {
-            record_size_ = current_record_.fields().size();
+            record_size_ = current_record_.size();
         }
     };
 

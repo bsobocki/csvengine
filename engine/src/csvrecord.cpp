@@ -23,3 +23,7 @@ Record::Record(std::vector<std::string_view>&& fields, std::vector<std::string>&
 const std::vector<std::string>& Record::fields() const {
     return fields_;
 }
+
+size_t Record::size() const {
+    return fields_.size();
+}

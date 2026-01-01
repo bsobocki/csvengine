@@ -194,6 +194,8 @@ Parser::ParseStatus Parser::csv_quotes_lenient_parse(std::string_view buffer) {
     return csv_quotes_strict_parse(buffer);
 }
 
+// === csv parsing without quotes ===
+
 // naive implementation without quotes
 Parser::ParseStatus Parser::naive_parse(std::string_view buffer) {
     consumed_ = 0;
