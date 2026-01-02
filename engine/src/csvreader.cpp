@@ -33,6 +33,12 @@ Reader::Reader(std::unique_ptr<IBuffer> buffer, const Config config)
 }
 
 void Reader::init() {
+    validate_config();
+
+    if (config_.record_size_policy == Config::RecordSizePolicy::strict_to_value) {
+        record_size_ = config_.record_size;
+    }
+
     if (!buffer_->good()) {
         throw BufferError();
     }
@@ -51,7 +57,11 @@ void Reader::read_headers() {
         current_record_.fields().begin(),
         current_record_.fields().end()
     );
-    record_size_ = headers_.size();
+
+    if (config_.record_size_policy == Config::RecordSizePolicy::strict_to_header) {
+        record_size_ = headers_.size();
+    }
+
     current_record_ = Record();
     line_number_ = 0;
 }
@@ -59,9 +69,12 @@ void Reader::read_headers() {
 bool Reader::next() {
     parser_.reset();
 
-    auto save_record = [&](std::vector<std::string>&& fields) {
+    auto save_record = [&, policy = config_.record_size_policy](std::vector<std::string>&& fields) {
         if (record_size_ == 0) {
-            record_size_ = fields.size();
+            if (policy == Config::RecordSizePolicy::strict_to_first)
+            {
+                record_size_ = fields.size();
+            }
         }
         else {
             auto expected_size = expected_record_size(fields.size());
@@ -69,7 +82,7 @@ bool Reader::next() {
                 throw RecordSizeError(line_number_, expected_size, fields.size());
             }
         }
-        current_record_ = Record(fields);
+        current_record_ = Record(std::move(fields));
         line_number_++;
     };
 
@@ -146,7 +159,7 @@ bool Reader::has_header() const {
     return config_.has_header;
 }
 
-std::size_t Reader::line_number () const {
+std::size_t Reader::line_number() const {
     return line_number_;
 }
 
@@ -155,17 +168,10 @@ std::size_t Reader::record_size() const {
 }
 
 size_t Reader::expected_record_size(size_t record_size) const {
-    auto policy = config_.record_size_policy;
-
-    if (policy == Config::RecordSizePolicy::flexible) return record_size;
-
-    if (policy == Config::RecordSizePolicy::strict_to_first ||
-        policy == Config::RecordSizePolicy::strict_to_header)
-    {
-        return record_size_;
+    if (config_.record_size_policy == Config::RecordSizePolicy::flexible) {
+        return record_size;
     }
-
-    return config_.record_size;
+    return record_size_;
 }
 
 Reader::operator bool() const {
@@ -174,6 +180,17 @@ Reader::operator bool() const {
 
 Config Reader::config() const {
     return config_;
+}
+
+void Reader::validate_config() const {
+    auto policy = config_.record_size_policy;
+    if (policy == Config::RecordSizePolicy::strict_to_header && !config_.has_header) {
+        throw ConfigError("strict_to_header requires has_header=true");
+    }
+
+    if (policy == Config::RecordSizePolicy::strict_to_value && config_.record_size == 0) {
+        throw ConfigError("strict_to_value policy requires record_size > 0");
+    }
 }
 
 const Record& Reader::current_record() const {

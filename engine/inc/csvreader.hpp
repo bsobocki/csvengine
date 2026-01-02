@@ -82,6 +82,7 @@ public:
 private:
     void read_headers();
     void init();
+    void validate_config() const;
     size_t expected_record_size(size_t record_size) const;
 
     friend class Iterator;

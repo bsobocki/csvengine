@@ -210,3 +210,21 @@ TEST_F(ReaderTest, RecordSize_DifferentRecordSizes) {
 
     EXPECT_THROW(reader->next(), csv::RecordSizeError);
 }
+
+TEST_F(ReaderTest, ConfigError_RecordSizePolicy_StrictToHeader_NoHeader) {
+    Config cfg{
+        .has_header = false,
+        .record_size_policy = Config::RecordSizePolicy::strict_to_header
+    };
+
+    EXPECT_THROW(Reader reader("./test_data/simple_file.csv", cfg), csv::ConfigError);
+}
+
+TEST_F(ReaderTest, ConfigError_RecordSizePolicy_StrictToValue_ValueZero) {
+    Config cfg{
+        .record_size_policy = Config::RecordSizePolicy::strict_to_value,
+        .record_size = 0
+    };
+
+    EXPECT_THROW(Reader reader("./test_data/simple_file.csv", cfg), csv::ConfigError);
+}
