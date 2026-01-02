@@ -7,7 +7,7 @@ Record::Record(const std::vector<std::string>& fields, const std::vector<std::st
 }
 
 Record::Record(std::vector<std::string>&& fields, std::vector<std::string>&& headers):
-    fields_(fields), headers_(headers) {
+    fields_(std::move(fields)), headers_(headers) {
 }
 
 Record::Record(const std::vector<std::string_view>& fields, const std::vector<std::string_view>& headers):
