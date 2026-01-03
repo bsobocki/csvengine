@@ -1,5 +1,4 @@
 add_library(csvengine
-    src/csvrecord.cpp
     src/csvparser.cpp
     src/csvreader.cpp
 )
