@@ -35,7 +35,7 @@
 - ✅ Parse RFC 4180 compliant CSVs
 - ✅ Inform about constraints exceeded (e.g.value too big)
 - ✅ Row-by-row iteration with STL-compatible iterators
-- ✅ Streaming mode (constant memory usage) - read row by row from file
+- ✅ Streaming mode -- $O(row)$ memory usage -- read row by row from file
 - ✅ Access field by index within record (row)
 - ✅ Access field by column name within record (row)
 - ✅ Basic type conversion (string, int, double, bool)
