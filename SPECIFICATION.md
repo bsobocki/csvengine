@@ -32,47 +32,47 @@
 
 ### Must Have (MVP)
 
-- ✅ Parse RFC 4180 compliant CSVs
-- ✅ Inform about constraints exceeded (e.g.value too big)
-- ✅ Row-by-row iteration with STL-compatible iterators
-- ✅ Streaming mode -- $O(row)$ memory usage -- read row by row from file
-- ✅ Access field by index within record (row)
-- ✅ Access field by column name within record (row)
-- ✅ Basic type conversion (string, int, double, bool)
-- ✅ Clear error messages with line/column information
-- ✅ Custom delimiters support
-- ✅ Handle quoted expressions with embedded commas, newlines, escaped quotes in fields
-- ✅ Configurable (option as constructor argument) header position (-1 for no_header)
-- ✅ Support Linux OS
-- ✅ Support for row and column where errors occurs with suggestion ("if this is not the root cause - check quotes that ends here or delimiters")
+- ☑️ Parse RFC 4180 compliant CSVs
+- ⬜️ Inform about constraints exceeded (e.g.value too big)
+- ☑️ Row-by-row iteration with STL-compatible iterators
+- ☑️ Streaming mode -- $O(row)$ memory usage -- read row by row from file
+- ☑️ Access field by index within record (row)
+- ☑️ Access field by column name within record (row)
+- ☑️ Basic type conversion (string, int, double, bool)
+- ☑️ Clear error messages with line/column information
+- ☑️ Custom delimiters support
+- ☑️ Handle quoted expressions with embedded commas, newlines, escaped quotes in fields
+- ☑️ Configurable (option as constructor argument) header position (-1 for no_header)
+- ☑️ Support Linux OS
+- ☑️ Support for row and column where errors occurs with suggestion ("if this is not the root cause - check quotes that ends here or delimiters")
 
 ### Should Have (Phase 2)
 
-- ✅ Support access by column name
-- ✅ Additional reading mode - in-memory mode (full load, enables random access as static key-value database)
-- ✅ Memory-mapped file I/O for performance
-- ✅ Column-wise access (iterate entire column)
-- ✅ Configurable error handling (strict/lenient/callback)
-- ✅ Custom type converters via template specialization
-- ✅ Settings and restrictions
-- ✅ Schema validation with custom rules (string in standard constructor or from file in special constructor or function that loads schema from file)
-- ✅ Statistics during parsing (min/max/count per column)
-- ✅ Warining queue (as additional info return by getter function)
-- ✅ Different line ending support (LF, CRLF, CR)
-- ✅ on-reading filtering and data manipulation - using callback functions
+- ☑️ Support access by column name
+- ⬜️ Additional reading mode - in-memory mode (full load, enables random access as static key-value database)
+- ⬜️ Memory-mapped file I/O for performance
+- ⬜️ [InMemory Database] Column-wise access (iterate entire column)
+- ⬜️ Configurable error handling (strict/lenient/callback)
+- ☑️ Type converters via template specialization
+- ⬜️ Settings and restrictions
+- ⬜️ Schema validation with custom rules (string in standard constructor or from file in special constructor or function that loads schema from file)
+- ⬜️ Statistics during parsing (min/max/count per column)
+- ⬜️ Warining queue (as additional info return by getter function)
+- ☑️ Different line ending support (LF, CRLF, CR)
+- ⬜️ on-reading filtering and data manipulation - using callback functions
 
 ### Could Have (Future)
 
-- ⚪ Support Windows OS
-- ⚪ Expanded syntax by restrictions in file header (column names)
-- ⚪ Write CSV support (export data)
-- ⚪ Compressed file support (gzip)
-- ⚪ Multi-threaded parsing (chunk-based parallelism)
-- ⚪ Alternative quote characters (configurable)
-- ⚪ Unicode support (UTF-8, UTF-16)
-- ⚪ Real-time streaming (network sources)
-- ⚪ JSON/XML conversion
-- ⚪ on-reading filtering and data manipulation - expanded with special syntax parsing
+- ⏹️ Support Windows OS
+- ⏹️ Expanded syntax by restrictions in file header (column names)
+- ⏹️ Write CSV support (export data)
+- ⏹️ Compressed file support (gzip)
+- ⏹️ Multi-threaded parsing (chunk-based parallelism)
+- ⏹️ Alternative quote characters (configurable)
+- ⏹️ Unicode support (UTF-8, UTF-16)
+- ⏹️ Real-time streaming (network sources)
+- ⏹️ JSON/XML conversion
+- ⏹️ on-reading filtering and data manipulation - expanded with special syntax parsing
 
 ### Won't Have (Out of Scope)
 
@@ -151,6 +151,7 @@
 - newline,
 - quoting,
 - header existence,
+- record size policy,
 - [Phase 2] data schema (types for every column),
 - [Phase 2] data reading mode.
 
@@ -170,6 +171,15 @@ struct Config {
     enum class LineEnding { Auto, LF, CRLF, CR };
     LineEnding line_ending = LineEnding::Auto;
 
+    enum class RecordSizePolicy {
+        flexible,          // Allow any size (default for compatibility)
+        strict_to_first,   // All records must match first record
+        strict_to_header,  // All records must match header count
+        strict_to_value    // User specifies expected size
+    };
+    RecordSizePolicy record_size_policy = RecordSizePolicy::strict_to_first;
+    size_t record_size = 0; // Value used to specify expected size
+
     bool is_line_ending(char ch) const;
 };
 
@@ -179,7 +189,7 @@ struct Config {
 ```cpp
 struct Config {
     /* Phase 1 fields */
-    std::optional<Schema> dataSchema;
+    std::optional<Schema> data_schema;
 
     enum class ReadingMode { streaming, inMemoryDatabase };
     ReadingMode dataReadingMode = ReadingMode::streaming;
@@ -888,19 +898,19 @@ public:
 [User Code]
      │ calls nextRecord()
      ▼
-[csv::Reader] ◄──────────────────────────────────────────────┐
-     │ 1. Is buffer low? ──┤Yes├──► [Read from File]       │
-     │ 2. Create view of buffer                            │
-     │ 3. Call parser.parse_chunk(view)                    │
-     ▼                                                     │
-[csv::Parser]                                                │
-     │ 1. Scan characters (State Machine)                  │
-     │ 2. Handle Quotes / Escapes                          │
-     │ 3. Return ParseResult                               │
-     │    { Status, BytesConsumed, Fields }                │
-     ▼                                                     │
-[csv::Reader]                                                │
-     │ Status == NeedMoreData? ────────────────────────────┘
+[csv::Reader] ◄──────────────────────────────────────┐
+     │ 1. Is buffer low? ──┤Yes├──► [Read from File] │
+     │ 2. Create view of buffer                      │
+     │ 3. Call parser.parse_chunk(view)              │
+     ▼                                               │
+[csv::Parser]                                        │
+     │ 1. Scan characters (State Machine)            │
+     │ 2. Handle Quotes / Escapes                    │
+     │ 3. Return ParseResult                         │
+     │    { Status, BytesConsumed, Fields }          │
+     ▼                                               │
+[csv::Reader]                                        │
+     │ Status == NeedMoreData? ──────────────────────┘
      │ Status == RecordFound?
      ▼
 [csv::Record] (Constructed & Returned)
