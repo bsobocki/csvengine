@@ -3,7 +3,6 @@
 #include <string>
 #include <fstream>
 #include <vector>
-#include <iostream>
 #include <memory>
 #include <iterator>
 #include <optional>
@@ -30,28 +29,28 @@ concept RecordViewVoidCallback =
 class Reader {
 public:
     // Construction & Configuration
-    explicit Reader(const std::string& filePath, const Config = {});
-    explicit Reader(std::unique_ptr<std::istream> stream, const Config = {});
-    explicit Reader(std::unique_ptr<IBuffer> buffer, const Config = {});
+    explicit Reader(const std::string& filePath, const Config& config = {});
+    explicit Reader(std::unique_ptr<std::istream> stream, const Config& config = {});
+    explicit Reader(std::unique_ptr<IBuffer> buffer, const Config& config = {});
 
     // No copy (owns file handle)
-    Reader(const Reader&) = delete;
-    Reader& operator=(const Reader&) = delete;
+    Reader(const Reader&) noexcept = delete;
+    Reader& operator=(const Reader&) noexcept = delete;
     // Move-only
     Reader(Reader&&) noexcept = default;
     Reader& operator=(Reader&&) noexcept = default;
 
-    bool good() const;
-    bool has_header() const;
-    std::size_t line_number() const;
-    std::size_t record_size() const;
-    explicit operator bool() const;
+    bool good() const noexcept;
+    bool has_header() const noexcept;
+    std::size_t line_number() const noexcept;
+    std::size_t record_size() const noexcept;
+    explicit operator bool() const noexcept;
 
-    // getters
-    Config config() const;
-    const Record& current_record() const;
+    Config config() const noexcept;
+    const Record& current_record() const noexcept;
+    const std::vector<std::string>& headers() const noexcept;
+    
     [[nodiscard]] bool next();
-    const std::vector<std::string>& headers() const;
 
     template<RecordViewBoolCallback Func>
     void for_each(Func&& iteration);
@@ -83,12 +82,12 @@ private:
     void read_headers();
     void init();
     void validate_config() const;
-    size_t expected_record_size(size_t record_size) const;
+    size_t expected_record_size(size_t record_size) const noexcept;
 
     friend class Iterator;
 
     Record current_record_;
-    long long line_number_ = 0;
+    size_t line_number_ = 0;
     size_t record_size_ = 0;
 
     std::string csv_file_path_;

@@ -12,7 +12,7 @@ public:
     MOCK_METHOD(bool, empty, (), (const, override));
     MOCK_METHOD(bool, eof, (), (const, override));
     MOCK_METHOD(bool, good, (), (const, override));
-    MOCK_METHOD(void, reset, (), (override));
+    MOCK_METHOD(bool, reset, (), (override));
 };
 
 }

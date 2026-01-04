@@ -7,7 +7,7 @@
 using namespace csv;
 using namespace std;
 
-Reader::Reader(const std::string& filepath, const Config config)
+Reader::Reader(const std::string& filepath, const Config& config)
     : csv_file_path_(filepath)
     , buffer_(make_buffer(filepath))
     , config_(config)
@@ -16,7 +16,7 @@ Reader::Reader(const std::string& filepath, const Config config)
     init();
 }
 
-Reader::Reader(std::unique_ptr<std::istream> stream, const Config config)
+Reader::Reader(std::unique_ptr<std::istream> stream, const Config& config)
     : buffer_(make_buffer(std::move(stream)))
     , config_(config)
     , parser_(config_)
@@ -24,7 +24,7 @@ Reader::Reader(std::unique_ptr<std::istream> stream, const Config config)
     init();
 }
 
-Reader::Reader(std::unique_ptr<IBuffer> buffer, const Config config)
+Reader::Reader(std::unique_ptr<IBuffer> buffer, const Config& config)
     : buffer_(std::move(buffer))
     , config_(config)
     , parser_(config_)
@@ -151,34 +151,34 @@ Reader::Iterator Reader::end() {
     return Reader::Iterator(nullptr);
 }
 
-bool Reader::good() const {
+bool Reader::good() const noexcept {
     return buffer_->good();
 }
 
-bool Reader::has_header() const {
+bool Reader::has_header() const noexcept {
     return config_.has_header;
 }
 
-std::size_t Reader::line_number() const {
+std::size_t Reader::line_number() const noexcept {
     return line_number_;
 }
 
-std::size_t Reader::record_size() const {
+std::size_t Reader::record_size() const noexcept {
     return record_size_;
 }
 
-size_t Reader::expected_record_size(size_t record_size) const {
+size_t Reader::expected_record_size(size_t record_size) const noexcept {
     if (config_.record_size_policy == Config::RecordSizePolicy::flexible) {
         return record_size;
     }
     return record_size_;
 }
 
-Reader::operator bool() const {
+Reader::operator bool() const noexcept {
     return good();
 }
 
-Config Reader::config() const {
+Config Reader::config() const noexcept {
     return config_;
 }
 
@@ -193,10 +193,10 @@ void Reader::validate_config() const {
     }
 }
 
-const Record& Reader::current_record() const {
+const Record& Reader::current_record() const noexcept {
     return current_record_;
 }
     
-const std::vector<std::string>& Reader::headers() const {
+const std::vector<std::string>& Reader::headers() const noexcept {
     return headers_;
 }

@@ -27,7 +27,7 @@ public:
     virtual bool empty() const = 0;
     virtual bool eof() const = 0;
     virtual bool good() const = 0;
-    virtual void reset() = 0;
+    virtual bool reset() = 0;
 };
 
 template <size_t N = DEFAULT_CAPACITY>
@@ -59,7 +59,6 @@ class Buffer : public IBuffer {
         Buffer(Buffer&&) noexcept = default;
         Buffer& operator=(Buffer&&) noexcept = default;
 
-
         ReadingResult refill() override {
             compact();
 
@@ -70,7 +69,7 @@ class Buffer : public IBuffer {
 
             stream_->read(data_.get() + size_, space);
 
-            auto bytes_read = stream_->gcount();
+            size_t bytes_read = static_cast<size_t>(stream_->gcount());
 
             if (bytes_read == 0)
                 return stream_->eof() ? ReadingResult::eof : ReadingResult::fail;
@@ -80,39 +79,40 @@ class Buffer : public IBuffer {
             return ReadingResult::ok;
         }
 
-        std::string_view view() const override {
+        std::string_view view() const noexcept override {
             return  {data_.get() + start_, available()};
         }
 
-        void consume(size_t bytes) override {
+        void consume(size_t bytes) noexcept override {
             start_ += std::min(bytes, available());
         }
 
-        size_t available() const override {
+        size_t available() const noexcept override {
             return size_ - start_;
         }
 
-        bool empty() const override {
+        bool empty() const noexcept override {
             return start_ == size_;
         }
 
-        bool eof() const override {
+        bool eof() const noexcept override {
             return available() == 0 && stream_->eof();
         }
 
-        bool good() const override {
+        bool good() const noexcept override {
             return stream_->good() || !empty();
         }
 
-        void reset() override {
+        bool reset() override {
             stream_->clear();
             stream_->seekg(0);
             start_ = 0;
             size_ = 0;
+            return stream_->good();
         }
 
     private:
-        void compact() {
+        void compact() noexcept {
             size_t leftover = available();
 
             // move leftover data to the beggining
