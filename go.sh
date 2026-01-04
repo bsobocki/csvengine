@@ -52,7 +52,7 @@ function do_run() {
 }
 
 function do_tests() {
-  executable="./build/tests/run_tests"
+  local executable="./build/tests/run_tests"
   if [ -f $executable ]; then
     echo "Running tests..."
     cd build
@@ -68,11 +68,12 @@ function do_tests() {
 }
 
 function do_run_tests() {
-  executable="./build/tests/run_tests"
+  local filter="${1}*"  # Default to all tests if no filter provided
+  local executable="./build/tests/run_tests"
   if [ -f $executable ]; then
     echo "Running tests..."
     cd build/tests
-    ./run_tests
+    ./run_tests --gtest_filter=$filter
   else
     echoError "Executable $executable not found. Did you build first?"
     echo "Run"
@@ -107,7 +108,9 @@ while [[ $# -gt 0 ]]; do
       do_tests
       ;;
     -rt|--run_tests|run_tests)
-      do_run_tests
+      shift
+      do_run_tests "$@"
+      break
       ;;
     -a|--all|all)
       do_clean
