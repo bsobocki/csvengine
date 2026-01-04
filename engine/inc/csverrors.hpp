@@ -50,6 +50,6 @@ public:
 
 class RecordColumnNameError : public std::runtime_error {
 public:
-    RecordColumnNameError(const std::string& column_name): std::runtime_error("Column " + column_name + " doesn't exists in record.") {}
+    RecordColumnNameError(std::string_view column_name): std::runtime_error("Column " + std::string(column_name) + " doesn't exists in record.") {}
 };
 }
