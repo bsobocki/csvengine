@@ -4,6 +4,8 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+STATUS=0
+
 function echoSuccess() {
   printf "${GREEN}✓ %s${NC}\n" "$1"
 }
@@ -13,34 +15,67 @@ function echoError() {
 }
 
 function do_clean() {
+  echo "┌──────────────────────┐"
+  echo "│ Cleaning project...  │"
+  echo "└──────────────────────┘"
+
   if [ -d "build" ]; then
     # This command deletes everything in 'build' EXCEPT the '_deps' folder (where GTest lives)
+    # to avoid downloading and building it again each time
     find build -mindepth 1 -maxdepth 1 -not -name "_deps" -exec rm -rf {} +
-    echo "Clean. (Kept Google Test in build/_deps)"
+    if [ $? -ne 0 ]; then
+      echoError "Fail on cleaning 'build' directory without google tests removal."
+    else
+      echoSuccess "Clean. (Kept Google Test in build/_deps)"
+    fi
   fi
 }
 
 function do_cleanall() {
+  echo "┌─────────────────────────┐"
+  echo "│ Cleaning everything...  │"
+  echo "└─────────────────────────┘"
+
   if [ -d "build" ]; then
     rm -rf build
-    echo "Everything Clean."
+    if [ $? -ne 0 ]; then
+      echoError "Fail on removing 'build' directory"
+    else
+      echoSuccess "Everything Clean."
+    fi
   fi
 }
 
 function do_build() {
-  echo "Building project..."
   mkdir -p build  # -p prevents error if folder exists
   cd build
+
+  echo "┌──────────────────────┐"
+  echo "│ Building project...  │"
+  echo "└──────────────────────┘"
+  
   cmake ..
+  STATUS=$?
+
+  if [ $STATUS -ne 0 ]; then
+    cd ..
+    return
+  fi
+  
   make
+  STATUS=$?
+
   cd .. # Return to root so next commands work correctly
 }
 
 function do_run() {
-  executable="./build/demo/csvengine_demo"
+  local executable="./build/demo/csvengine_demo"
   if [ -f $executable ]; then
-    echo "Running demo application..."
+    echo "┌──────────────────┐"
+    echo "│ Running demo...  │"
+    echo "└──────────────────┘"
     $executable
+    STATUS=$?
   else
     echoError "Executable $executable not found. Did you build first?"
     echo "Run"
@@ -54,9 +89,16 @@ function do_run() {
 function do_tests() {
   local executable="./build/tests/run_tests"
   if [ -f $executable ]; then
-    echo "Running tests..."
     cd build
+
+    echo "┌───────────────────┐"
+    echo "│ Running tests...  │"
+    echo "└───────────────────┘"
+
     ctest --output-on-failure
+    STATUS=$?
+
+    cd ..
   else
     echoError "Executable $executable not found. Did you build first?"
     echo "Run"
@@ -68,12 +110,19 @@ function do_tests() {
 }
 
 function do_run_tests() {
-  local filter="${1}*"  # Default to all tests if no filter provided
+  local filter="${1}*" # Run all tests for given test group or all if none provided
   local executable="./build/tests/run_tests"
   if [ -f $executable ]; then
-    echo "Running tests..."
     cd build/tests
+
+    echo "┌──────────────────┐"
+    echo "│ Running tests... │"
+    echo "└──────────────────┘"
+
     ./run_tests --gtest_filter=$filter
+    STATUS=$?
+
+    cd ../..
   else
     echoError "Executable $executable not found. Did you build first?"
     echo "Run"
@@ -89,37 +138,55 @@ while [[ $# -gt 0 ]]; do
     -c|--clean|clean)
       do_clean
       ;;
+
     --clean-all|--cleanAll|--cleanall|clean-all|cleanall|cleanAll)
       do_cleanall
       ;;
+
     -b|--build|build)
       do_build
       ;;
+
     -r|--run|run|demo)
       do_run
       ;;
+
     --rebuild|rebuild)
       if [ -f $executable ]; then
         do_clean
       fi
       do_build
       ;;
+
     -t|--tests|tests)
       do_tests
       ;;
+
     -rt|--run_tests|run_tests)
       shift
       do_run_tests "$@"
       break
       ;;
+
     -a|--all|all)
       do_clean
       do_build
-      do_run
+      if [ $STATUS -eq 0 ]; then
+        do_run
+      fi
       ;;
+
     *)
       echo "Unknown option: $1"
     ;;
   esac
+
+  if [ $STATUS -ne 0 ]; then
+    echoError "GO failed with status: $STATUS"
+    exit $STATUS
+  fi
+
   shift
 done
+
+echoSuccess "GO finished successfully"
