@@ -1,5 +1,7 @@
 #pragma once
 
+#include <csverrors.hpp>
+
 #include <memory>
 #include <optional>
 #include <vector>
@@ -49,19 +51,19 @@ public:
         return get<T>(std::distance(headers_.begin(), it));
     }
 
-    std::string_view operator[](size_t index) const {
+    const std::string& operator[](size_t index) const {
         if (index >= fields_.size()) {
-            return {};
+            throw std::out_of_range("Field index out of range");
         }
-        return std::string_view(fields_[index].begin(), fields_[index].end());
+        return fields_[index];
     }
 
-    std::string_view operator[](const std::string& column_name) const {
+    const std::string& operator[](const std::string& column_name) const {
         auto it = std::find(headers_.begin(), headers_.end(), column_name);
         if (it == headers_.end()) {
-            return {};
+            throw RecordColumnNameError(column_name);
         }
-        return operator[](std::distance(headers_.begin(), it));
+        return fields_[std::distance(headers_.begin(), it)];
     }
 
     const std::vector<std::string>& fields() const {
@@ -79,7 +81,7 @@ public:
 private:
     template<typename T>
     std::optional<T> convert(const std::string& str) const {
-        if constexpr (std::is_same_v<T, std::string>) {
+        if constexpr (std::is_convertible_v<const std::string&, T>) {
             return str;
         }
         else if constexpr (std::is_arithmetic_v<T>) {
