@@ -43,7 +43,7 @@ public:
     }
 
     template<typename T = std::string>
-    std::optional<T> get(const std::string& column_name) const {
+    std::optional<T> get(std::string_view column_name) const {
         auto it = std::find(headers_.begin(), headers_.end(), column_name);
         if (it == headers_.end()) {
             return std::nullopt;
@@ -51,14 +51,14 @@ public:
         return get<T>(std::distance(headers_.begin(), it));
     }
 
-    const std::string& operator[](size_t index) const {
+    const std::string& at(size_t index) const {
         if (index >= fields_.size()) {
             throw std::out_of_range("Field index out of range");
         }
         return fields_[index];
     }
 
-    const std::string& operator[](const std::string& column_name) const {
+    const std::string& at(std::string_view column_name) const {
         auto it = std::find(headers_.begin(), headers_.end(), column_name);
         if (it == headers_.end()) {
             throw RecordColumnNameError(column_name);
@@ -66,16 +66,32 @@ public:
         return fields_[std::distance(headers_.begin(), it)];
     }
 
-    const std::vector<std::string>& fields() const {
+    const std::string& operator[](size_t index) const noexcept {
+        return fields_[index];
+    }
+
+    const std::string& operator[](std::string_view column_name) const {
+        return at(column_name);
+    }
+
+    const std::vector<std::string>& fields() const noexcept {
         return fields_;
     }
 
-    const std::vector<std::string>& headers() const {
+    const std::vector<std::string>& headers() const noexcept {
         return headers_;
     }
 
-    size_t size() const {
+    size_t size() const noexcept {
         return fields_.size();
+    }
+
+    bool empty() const noexcept {
+        return fields_.empty();
+    }
+
+    bool has_headers() const noexcept {
+        return !headers_.empty();
     }
 
 private:
@@ -107,8 +123,8 @@ private:
         const char* first = str.data();
         const char* last = str.data() + str.size();
 
-        // skip trailing spaces
-        while (first != last && std::isspace(*first)) {
+        // skip leading spaces
+        while (first != last && std::isspace(static_cast<unsigned char>(*first))) {
             ++first;
         }
 
@@ -118,25 +134,14 @@ private:
             return std::nullopt;
         }
 
-        if (conversion_end == last) {
-            // all chars consumed
-            return value;
-        }
-
-        // move through whitespaces
-        while (conversion_end != last && std::isspace(*conversion_end)) {
+        // move through trailing spaces
+        while (conversion_end != last && std::isspace(static_cast<unsigned char>(*conversion_end))) {
             conversion_end++;
         }
 
-        if (conversion_end == last) {
-            // there is no more non-whitespace chars
-            return value;
-        }
-
-        return std::nullopt;
+        // if there are more chars that are not whitespace then the value is not a number
+        return (conversion_end == last) ? std::optional<T>(value) : std::nullopt;
     }
-
-    std::size_t column_to_index(const std::string& column_name) const;
 
     std::vector<std::string> fields_;
     std::vector<std::string> headers_;

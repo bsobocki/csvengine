@@ -104,16 +104,6 @@ TEST(RecordTest, NormalRecord_SubscriptOperator_ValidAsString) {
     EXPECT_EQ(record[5], "45ll");
 }
 
-TEST(RecordTest, NormalRecord_SubscriptOperator_ThrowOnWrongIndex) {
-    Record record(str_vec{"  10 .5  ", " 20 1", "30 20", " aa ", "a4", "45ll"});
-    EXPECT_THROW(record[10], std::out_of_range);
-    EXPECT_THROW(record[100], std::out_of_range);
-    EXPECT_THROW(record[21], std::out_of_range);
-    EXPECT_THROW(record[13], std::out_of_range);
-    EXPECT_THROW(record[42], std::out_of_range);
-    EXPECT_THROW(record[6], std::out_of_range);
-}
-
 TEST(RecordTest, NormalRecord_SubscriptOperator_ColumnNameAccess) {
     Record record(
         str_vec{"Bożydar", "21", "Poland"},
