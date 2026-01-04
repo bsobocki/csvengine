@@ -27,7 +27,7 @@ public:
     void reset();
 
 private:
-    ParseStatus naive_parse(std::string_view buffer);
+    ParseStatus simple_parse(std::string_view buffer);
     ParseStatus csv_quotes_strict_parse(std::string_view buffer);
     ParseStatus csv_quotes_lenient_parse(std::string_view buffer);
     void insert_fields(const std::vector<std::string_view>& fields);

@@ -24,8 +24,7 @@ std::vector<std::string_view> split(std::string_view str, const char delim) {
 }
 }
 
-Parser::Parser(Config config): config_(config) {   
-}
+Parser::Parser(Config config): config_(config) {}
 
 Parser::ParseStatus Parser::parse(std::string_view buffer) {
     if (config_.has_quoting) {
@@ -34,10 +33,57 @@ Parser::ParseStatus Parser::parse(std::string_view buffer) {
         }
         return csv_quotes_lenient_parse(buffer);
     } 
-    return naive_parse(buffer);
+    return simple_parse(buffer);
 }
 
-// === simplest csv quotes parsing - char by char ===
+// ====== csv parsing without quotes ======
+
+// naive implementation without quotes
+Parser::ParseStatus Parser::simple_parse(std::string_view buffer) {
+    consumed_ = 0;
+
+    auto newline_pos = buffer.find('\n');
+
+    if (newline_pos == std::string_view::npos) {
+        if (buffer.empty()) {
+            incomplete_last_read_ = true;
+            return Parser::ParseStatus::need_more_data;
+        }
+
+        auto fields = split(buffer, config_.delimiter);
+        insert_fields(fields);
+        consumed_ = buffer.size();
+        
+        return Parser::ParseStatus::need_more_data;
+    }
+
+    auto line = buffer.substr(0, newline_pos);
+
+    if (line.empty()) {
+        consumed_ = 1;
+        return Parser::ParseStatus::complete;
+    }
+
+    auto fields = split(line, config_.delimiter);
+    insert_fields(fields);
+    consumed_ += line.size()  + 1; // + newline character
+
+    return Parser::ParseStatus::complete;
+}
+
+void Parser::insert_fields(const std::vector<std::string_view>& fields) {
+    auto field = fields.begin();
+    if (incomplete_last_read_) {
+        fields_[fields_.size()-1] += *field++;
+        incomplete_last_read_ = false;
+    }
+
+    while(field != fields.end()) {
+        fields_.emplace_back(*field++);
+    }
+}
+
+// ====== simplest csv quotes parsing - strict mode - char by char ======
 
 // strict mode
 Parser::ParseStatus Parser::csv_quotes_strict_parse(std::string_view buffer) {
@@ -188,58 +234,11 @@ Parser::ParseStatus Parser::csv_quotes_strict_parse(std::string_view buffer) {
     return Parser::ParseStatus::need_more_data;
 }
 
-// lenient mode
+// ====== simplest csv quotes parsing - lenient mode - char by char ======
+
 Parser::ParseStatus Parser::csv_quotes_lenient_parse(std::string_view buffer) {
     // TODO: implement lenient parse and replace it
     return csv_quotes_strict_parse(buffer);
-}
-
-// === csv parsing without quotes ===
-
-// naive implementation without quotes
-Parser::ParseStatus Parser::naive_parse(std::string_view buffer) {
-    consumed_ = 0;
-
-    auto newline_pos = buffer.find('\n');
-
-    if (newline_pos == std::string_view::npos) {
-        if (buffer.empty()) {
-            incomplete_last_read_ = true;
-            return Parser::ParseStatus::need_more_data;
-        }
-
-        auto fields = split(buffer, config_.delimiter);
-        insert_fields(fields);
-        consumed_ = buffer.size();
-        
-        return Parser::ParseStatus::need_more_data;
-    }
-
-    auto line = buffer.substr(0, newline_pos);
-
-    if (line.empty()) {
-        consumed_ = 1;
-        return Parser::ParseStatus::complete;
-    }
-
-    auto fields = split(line, config_.delimiter);
-    insert_fields(fields);
-    consumed_ += line.size()  + 1; // + newline character
-
-    return Parser::ParseStatus::complete;
-}
-
-// for naive implementation
-void Parser::insert_fields(const std::vector<std::string_view>& fields) {
-    auto field = fields.begin();
-    if (incomplete_last_read_) {
-        fields_[fields_.size()-1] += *field++;
-        incomplete_last_read_ = false;
-    }
-
-    while(field != fields.end()) {
-        fields_.emplace_back(*field++);
-    }
 }
 
 void Parser::reset() {
