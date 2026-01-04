@@ -4,6 +4,7 @@ add_executable(run_tests
   csvreader_test.cpp
   csvbuffer_test.cpp
   csvparser_test.cpp
+  csvrecord_test.cpp
 )
 
 # Link our test executable against:
