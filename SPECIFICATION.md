@@ -343,6 +343,104 @@ Spaces inside quotes will be read as they are, but spaces around delimiters will
 
 ## 2.4 Parsing Protocol
 
+## 2.4.1 Parse Modes
+
+### Strict Mode (Default)
+
+Strict mode follows RFC 4180 exactly. Any deviation from the standard results in a `ParseStatus::fail`:
+
+- Quote character not at field start → **Error**
+- Content after closing quote → **Error**
+- Unclosed quote at record end → **Error**
+
+### Lenient Mode
+
+Lenient mode attempts to parse malformed CSV data by treating unexpected quotes as literal characters. It **never returns `ParseStatus::fail`** - it always produces some output.
+
+#### Core Rules
+
+| Rule | Description |
+|------|-------------|
+| **Opening Quote** | Only valid at **field start**. Quote elsewhere in unquoted field is treated as literal. |
+| **Closing Quote** | Any single `"` inside quoted field closes quoting (unless followed by another `"`). |
+| **Escaped Quote** | `""` inside quoted field becomes literal `"`. |
+| **Content After Close** | Content after closing quote is appended to the same field as literal text. |
+
+#### Quote Handling Decision Table
+
+| Context | Character | Behavior |
+|---------|-----------|----------|
+| Field start | `"` | Opens quoted mode |
+| Unquoted field | `"` | Literal character |
+| Inside quotes | `""` | Escaped quote (single `"` in output) |
+| Inside quotes | `"` + delimiter/newline | Closes quoted mode, ends field |
+| Inside quotes | `"` + other content | Closes quoted mode, content appended as literal |
+
+#### Examples
+
+| Input | Output | Explanation |
+|-------|--------|-------------|
+| `hello\n` | `hello` | Simple unquoted field |
+| `"hello"\n` | `hello` | Simple quoted field |
+| `"hello""world"\n` | `hello"world` | Escaped quote inside quotes |
+| `aa"hello"a\n` | `aa"hello"a` | Quotes not at start → all literal |
+| `aa""hello\n` | `aa""hello` | Not quoted, `""` is two literal quotes |
+| `"aa"hello"a\n` | `aahello"a` | Opens, `aa`, closes, `hello"a` literal |
+| `""aahello\n` | `aahello` | Opens, immediately closes (empty), `aahello` literal |
+| `""\n` | `` (empty) | Opens, closes, empty field |
+| `""""\n` | `"` | Opens, `""` escape, closes |
+| `""""""\n` | `""` | Opens, escape, escape, closes |
+| `"hello"world\n` | `helloworld` | Quoted, closes, `world` appended |
+| ` "hello"\n` | ` "hello"` | Space before quote → unquoted, all literal |
+| `"hello" \n` | `hello ` | Quoted, closes, space appended |
+
+#### Multi-Field Examples
+
+| Input | Field 0 | Field 1 |
+|-------|---------|---------|
+| `a,"b,c",d\n` | `a` | `b,c` | `d` |
+| `"a"b,c\n` | `ab` | `c` |
+| `aa"bb","cc"dd\n` | `aa"bb"` | `ccdd` |
+
+#### Buffer Boundary Behavior
+
+When a closing quote appears at buffer end, `pending_quote_` is set. On next buffer:
+
+| Next Character | Behavior |
+|----------------|----------|
+| `"` | Escaped quote `""` → add literal `"`, re-enter quoted mode |
+| `,` (delimiter) | Quote was closing, move to next field |
+| `\n` (newline) | Quote was closing, complete record |
+| Other | Quote was closing, continue as literal content |
+
+#### Design Rationale
+
+1. **Data Preservation**: Lenient mode prioritizes keeping data over strict validation
+2. **Predictability**: Simple rules - quotes only special at field start
+3. **Compatibility**: Handles common real-world malformed CSVs (Excel exports, manual edits)
+4. **No Silent Failures**: Always produces output, never silently drops data
+
+---
+
+Also update **Section 2.5 Key Decisions**:
+
+---
+
+**Decision: [Lenient Mode Quote Handling]**
+- **Context:** How should lenient mode handle quotes that appear mid-field?
+- **Options Considered:**
+  - A) Quote anywhere starts quoting context (complex state tracking)
+  - B) Quote at field start only, elsewhere literal (simple, predictable)
+  - C) Try to "recover" by re-opening quotes (unpredictable results)
+- **Decision:** Option B - quotes only meaningful at field start
+- **Rationale:** 
+  - Predictable behavior - users know exactly what to expect
+  - Simpler implementation - less state to track
+  - Data preservation - no data is silently modified or dropped
+  - Matches behavior of most lenient parsers (Python csv, pandas)
+
+---
+
 ### High-level process
 
 **Input**: Text stream (sile, string, buffer)
