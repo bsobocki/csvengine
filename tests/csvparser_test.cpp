@@ -9,7 +9,6 @@ using namespace csv;
 class ParserTest : public ::testing::Test {
 protected:
     Parser strict_parser{{.parse_mode = Config::ParseMode::strict}};
-    Parser lenient_parser{{.parse_mode = Config::ParseMode::lenient}};
     Parser no_quote_parser{{.has_quoting = false}};
     Parser semi_parser{{.delimiter = ';'}};
 
