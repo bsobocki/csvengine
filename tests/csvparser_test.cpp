@@ -15,7 +15,7 @@ protected:
     void ExpectParse(std::unique_ptr<Parser>& parser,
                 std::string_view input,
                 ParseStatus expected_status,
-                const std::vector<std::string_view>& expected_fields = {}){
+                const std::vector<std::string>& expected_fields = {}){
         EXPECT_EQ(parser->parse(input), expected_status);
         if (!expected_fields.empty()) {
             EXPECT_EQ(parser->peek_fields(), expected_fields);
@@ -58,9 +58,8 @@ TEST_F(ParserTest, Basic_SingleEmptyField) {
 
 TEST_F(ParserTest, MoveFields_MoveData) {
     std::vector<std::string> expected_fields = {"Mark", "is", "quite","\"normal\""};
-    std::vector<std::string_view> expected_fields_view = std::vector<std::string_view>(expected_fields.begin(), expected_fields.end());
 
-    ExpectParse(strict_parser, "\"Mark\",is,quite,\"\"\"normal\"\"\"\n", ParseStatus::complete, expected_fields_view);
+    ExpectParse(strict_parser, "\"Mark\",is,quite,\"\"\"normal\"\"\"\n", ParseStatus::complete, expected_fields);
     EXPECT_EQ(strict_parser->move_fields(),  expected_fields);
     EXPECT_TRUE(strict_parser->peek_fields().empty());
     EXPECT_TRUE(strict_parser->move_fields().empty());
@@ -280,11 +279,11 @@ TEST_F(ParserTest, Strict_SpaceAfterQuote) {
 // ============================================================
 
 TEST_F(ParserTest, Reset_ClearsFields) {
-    std::vector<std::string_view> expected_fields = {"a", "b"};
+    std::vector<std::string> expected_fields = {"a", "b"};
     ExpectParse(strict_parser, "a,b\nabc", ParseStatus::complete, expected_fields);
     EXPECT_EQ(strict_parser->peek_fields(), expected_fields);
     strict_parser->reset();
-    EXPECT_EQ(strict_parser->peek_fields(), std::vector<std::string_view>{});
+    EXPECT_EQ(strict_parser->peek_fields(), std::vector<std::string>{});
 }
 
 TEST_F(ParserTest, Reset_ClearsState) {

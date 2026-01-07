@@ -13,7 +13,7 @@ protected:
     void ExpectParse(std::unique_ptr<Parser>& parser,
                 std::string_view input,
                 ParseStatus expected_status,
-                const std::vector<std::string_view>& expected_fields = {}) {
+                const std::vector<std::string>& expected_fields = {}) {
         EXPECT_EQ(parser->parse(input), expected_status);
         if (!expected_fields.empty()) {
             EXPECT_EQ(parser->peek_fields(), expected_fields);
@@ -57,9 +57,8 @@ TEST_F(LenientParserTest, Basic_SingleEmptyField) {
 TEST_F(LenientParserTest, MoveFields_MoveData) {
     const std::string data = "\"Mark\",is,quite,\"\"\"normal\"\"\"\n";
     std::vector<std::string> expected_fields = {"Mark", "is", "quite", "\"normal\""};
-    std::vector<std::string_view> expected_fields_view(expected_fields.begin(), expected_fields.end());
 
-    ExpectParse(lenient_parser, data, ParseStatus::complete, expected_fields_view);
+    ExpectParse(lenient_parser, data, ParseStatus::complete, expected_fields);
     EXPECT_EQ(lenient_parser->move_fields(), expected_fields);
     EXPECT_TRUE(lenient_parser->peek_fields().empty());
     EXPECT_TRUE(lenient_parser->move_fields().empty());
@@ -296,11 +295,11 @@ TEST_F(LenientParserTest, Buffer_SingleCharChunks) {
 // ============================================================
 
 TEST_F(LenientParserTest, Reset_ClearsFields) {
-    std::vector<std::string_view> expected_fields = {"a", "b"};
+    std::vector<std::string> expected_fields = {"a", "b"};
     ExpectParse(lenient_parser, "a,b\nabc", ParseStatus::complete, expected_fields);
     EXPECT_EQ(lenient_parser->peek_fields(), expected_fields);
     lenient_parser->reset();
-    EXPECT_EQ(lenient_parser->peek_fields(), std::vector<std::string_view>{});
+    EXPECT_EQ(lenient_parser->peek_fields(), std::vector<std::string>{});
 }
 
 TEST_F(LenientParserTest, Reset_ClearsState) {
@@ -448,7 +447,7 @@ TEST_F(LenientParserTest, Lenient_UnclosedQuoteAtEOF) {
     // "hello without close - lenient accepts at EOF
     EXPECT_EQ(lenient_parser->parse("\"hello"), ParseStatus::need_more_data);
     // Simulate EOF by checking what we have
-    EXPECT_EQ(lenient_parser->peek_fields(), std::vector<std::string_view>{"hello"});
+    EXPECT_EQ(lenient_parser->peek_fields(), std::vector<std::string>{"hello"});
 }
 
 TEST_F(LenientParserTest, Lenient_NewlineInQuotedField) {

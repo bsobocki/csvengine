@@ -14,21 +14,20 @@ enum class ParseStatus {complete, need_more_data, fail};
 class Parser {
 public:
     explicit Parser(const Config& config);
+    virtual ~Parser() = default;
 
     /// @brief function parse doesn't reset the parser state
     [[nodiscard]] virtual ParseStatus parse(std::string_view buffer) = 0;
 
-    [[nodiscard]] size_t consumed() const;
+    [[nodiscard]] size_t consumed() const noexcept;
+    [[nodiscard]] std::string_view err_msg() const noexcept;
+    std::vector<std::string> move_fields() noexcept;
+    const std::vector<std::string>& peek_fields() const noexcept;
 
-    [[nodiscard]] std::string err_msg() const;
-
-    std::vector<std::string> move_fields();
-    std::vector<std::string_view> peek_fields();
-
-    virtual void reset();
+    virtual void reset() noexcept;
 
 protected:
-    Config config_;
+    const Config config_;
     std::string err_msg_;
     std::vector<std::string> fields_;
 
@@ -56,7 +55,7 @@ class QuotingParser : public Parser {
 public:
     explicit QuotingParser(const Config& config);
 
-    void reset() override;
+    void reset() noexcept override;
 
 protected:
     bool in_quotes_ = false;
