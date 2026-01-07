@@ -93,7 +93,7 @@ private:
     std::string csv_file_path_;
     std::unique_ptr<IBuffer> buffer_;
     const Config config_;
-    Parser parser_;
+    std::unique_ptr<Parser> parser_;
     std::vector<std::string> headers_;
 };
 

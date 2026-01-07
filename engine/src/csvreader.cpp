@@ -4,14 +4,15 @@
 #include <optional>
 #include <format>
 
-using namespace csv;
 using namespace std;
+
+namespace csv {
 
 Reader::Reader(const std::string& filepath, const Config& config)
     : csv_file_path_(filepath)
     , buffer_(make_buffer(filepath))
     , config_(config)
-    , parser_(config_)
+    , parser_(make_parser(config))
 {
     init();
 }
@@ -19,7 +20,7 @@ Reader::Reader(const std::string& filepath, const Config& config)
 Reader::Reader(std::unique_ptr<std::istream> stream, const Config& config)
     : buffer_(make_buffer(std::move(stream)))
     , config_(config)
-    , parser_(config_)
+    , parser_(make_parser(config))
 {
     init();
 }
@@ -27,7 +28,7 @@ Reader::Reader(std::unique_ptr<std::istream> stream, const Config& config)
 Reader::Reader(std::unique_ptr<IBuffer> buffer, const Config& config)
     : buffer_(std::move(buffer))
     , config_(config)
-    , parser_(config_)
+    , parser_(make_parser(config))
 {
     init();
 }
@@ -67,7 +68,7 @@ void Reader::read_headers() {
 }
 
 bool Reader::next() {
-    parser_.reset();
+    parser_->reset();
 
     auto save_record = [&, policy = config_.record_size_policy](std::vector<std::string>&& fields) {
         if (record_size_ == 0) {
@@ -91,7 +92,7 @@ bool Reader::next() {
             auto refill_result = buffer_->refill();
 
             if (refill_result == ReadingResult::eof) {
-                auto fields = parser_.move_fields();
+                auto fields = parser_->move_fields();
 
                 if (!fields.empty()) {
                     save_record(std::move(fields));
@@ -106,20 +107,20 @@ bool Reader::next() {
         }
 
         auto data = buffer_->view();
-        auto result = parser_.parse(data);
-        buffer_->consume(parser_.consumed());
+        auto result = parser_->parse(data);
+        buffer_->consume(parser_->consumed());
 
-        if (result == Parser::ParseStatus::complete) {
-            save_record(parser_.move_fields());
+        if (result == ParseStatus::complete) {
+            save_record(parser_->move_fields());
             return true;
         }
 
-        if (result == Parser::ParseStatus::fail) {
+        if (result == ParseStatus::fail) {
             break;
         }
     }
 
-    return false; // on Parser::ParseStatus::fail
+    return false; // on ParseStatus::fail
 }
 
 Reader::Iterator::Iterator(Reader* reader): reader_(reader) {
@@ -199,4 +200,6 @@ const Record& Reader::current_record() const noexcept {
     
 const std::vector<std::string>& Reader::headers() const noexcept {
     return headers_;
+}
+
 }
