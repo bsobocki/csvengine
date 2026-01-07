@@ -3,8 +3,9 @@ add_executable(run_tests
   tests.cpp
   csvreader_test.cpp
   csvbuffer_test.cpp
-  csvparser_test.cpp
-  csvparser_lenient_test.cpp
+  csvparser_tests/csvparser_quoting_lenient_test.cpp
+  csvparser_tests/csvparser_quoting_strict_test.cpp
+  csvparser_tests/csvparser_simple_test.cpp
   csvrecord_test.cpp
 )
 
