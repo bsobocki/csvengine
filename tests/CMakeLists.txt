@@ -1,12 +1,11 @@
 # Create the executable for our tests
-add_executable(run_tests 
-  tests.cpp
-  csvreader_test.cpp
-  csvbuffer_test.cpp
-  csvparser_tests/csvparser_quoting_lenient_test.cpp
-  csvparser_tests/csvparser_quoting_strict_test.cpp
-  csvparser_tests/csvparser_simple_test.cpp
-  csvrecord_test.cpp
+add_executable(run_tests
+  src/csvreader_test.cpp
+  src/csvbuffer_test.cpp
+  src/csvparser_tests/csvparser_quoting_lenient_test.cpp
+  src/csvparser_tests/csvparser_quoting_strict_test.cpp
+  src/csvparser_tests/csvparser_simple_test.cpp
+  src/csvrecord_test.cpp
 )
 
 # Link our test executable against:
