@@ -33,9 +33,9 @@ ParseStatus SimpleParser::parse(std::string_view buffer) {
             auto fields = split(buffer, config_.delimiter);
             insert_fields(fields);
             consumed_ = buffer.size();
+            incomplete_last_read_ = true;
         }
-        
-        incomplete_last_read_ = true;
+
         return ParseStatus::need_more_data;
     }
 
@@ -57,7 +57,7 @@ ParseStatus SimpleParser::parse(std::string_view buffer) {
 
 void SimpleParser::insert_fields(const std::vector<std::string_view>& fields) {
     auto field = fields.begin();
-    if (incomplete_last_read_) {
+    if (incomplete_last_read_ && !fields_.empty()) {
         fields_[fields_.size()-1] += *field++;
     }
     while(field != fields.end()) {
