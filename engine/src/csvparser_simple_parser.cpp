@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstring>
 #include <csvparser.hpp>
+#include <cstring>
 
 namespace csv {
 
@@ -8,17 +9,17 @@ SimpleParser::SimpleParser(const Config& config): Parser(config) {}
 
 std::vector<std::string_view> SimpleParser::split(std::string_view str, const char delim) const {
     std::vector<std::string_view> result;
-    
-    size_t start = 0;
-    size_t end = str.find(delim);
+    const char* str_end = str.data() + str.size();
+    const char* start = str.data();
+    const char* end = static_cast<const char*>(memchr(str.data(), delim, str.size()));
 
-    while(end != std::string_view::npos) {
-        result.push_back(str.substr(start, end - start));
+    while(end) {
+        result.emplace_back(start, static_cast<size_t>(end - start));
         start = end + 1;
-        end = str.find(delim, start);
+        end = static_cast<const char*>(memchr(start, delim, str_end - start));
     }
 
-    result.push_back(str.substr(start));
+    result.emplace_back(start, static_cast<size_t>(str_end - start));
 
     return result;
 }
@@ -26,30 +27,40 @@ std::vector<std::string_view> SimpleParser::split(std::string_view str, const ch
 ParseStatus SimpleParser::parse(std::string_view buffer) {
     consumed_ = 0;
 
-    auto newline_pos = buffer.find('\n');
-
-    if (newline_pos == std::string_view::npos) {
+    const char newline = config_.line_ending == Config::LineEnding::cr ? '\r' : '\n';
+    const char *newline_ptr = static_cast<const char*>(memchr(buffer.data(), newline, buffer.size()));
+    
+    if (!newline_ptr) {
         if (!buffer.empty()) {
             auto fields = split(buffer, config_.delimiter);
             insert_fields(fields);
             consumed_ = buffer.size();
             incomplete_last_read_ = true;
         }
-
         return ParseStatus::need_more_data;
     }
-
+    
+    const size_t newline_pos = static_cast<size_t>(newline_ptr - buffer.data());
     auto line = buffer.substr(0, newline_pos);
 
+    if (config_.line_ending == Config::LineEnding::crlf) {
+        // In CRLF mode, we searched for '\n' (term == '\n').
+        // Require preceding '\r' in the LINE view.
+        if (newline_pos == 0 || buffer[newline_pos - 1] != '\r')
+            return ParseStatus::fail;
+
+        line.remove_suffix(1);
+    }
+
+    consumed_ = newline_pos + 1;
+
     if (line.empty()) {
-        consumed_ = 1;
         incomplete_last_read_ = false;
         return ParseStatus::complete;
     }
 
     auto fields = split(line, config_.delimiter);
     insert_fields(fields);
-    consumed_ += line.size()  + 1; // + newline character
 
     incomplete_last_read_ = false;
     return ParseStatus::complete;
@@ -57,7 +68,7 @@ ParseStatus SimpleParser::parse(std::string_view buffer) {
 
 void SimpleParser::insert_fields(const std::vector<std::string_view>& fields) {
     auto field = fields.begin();
-    if (incomplete_last_read_ && !fields_.empty()) {
+    if (incomplete_last_read_ && !fields_.empty() && field != fields.end()) {
         fields_[fields_.size()-1] += *field++;
     }
     while(field != fields.end()) {
