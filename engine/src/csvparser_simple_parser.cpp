@@ -39,7 +39,7 @@ ParseStatus SimpleParser::parse(std::string_view buffer) {
         }
         return ParseStatus::need_more_data;
     }
-    
+
     const size_t newline_pos = static_cast<size_t>(newline_ptr - buffer.data());
     auto line = buffer.substr(0, newline_pos);
 
@@ -52,6 +52,11 @@ ParseStatus SimpleParser::parse(std::string_view buffer) {
     consumed_ = newline_pos + 1;
 
     if (line.empty()) {
+        if (config_.line_ending == Config::LineEnding::crlf && incomplete_last_read_ &&
+            !fields_.empty() && !fields_.back().empty() && fields_.back().back() == '\r')
+        {
+            fields_.back().pop_back();
+        }
         incomplete_last_read_ = false;
         return ParseStatus::complete;
     }

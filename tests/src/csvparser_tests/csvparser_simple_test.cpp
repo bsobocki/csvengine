@@ -167,3 +167,105 @@ TEST_F(SimpleParserTest, Buffer_SingleCharChunks) {
     }
     EXPECT_EQ(simple_parser->move_fields(), (std::vector<std::string>{"a", "b"}));
 }
+
+
+// ============================================================
+// CRLF (lenient) behavior
+// ============================================================
+
+TEST(SimpleParserLineEndingTest, CRLF_Accepts_CRLF_Strips_CR) {
+    auto p = make_parser({.has_quoting = false, .line_ending = Config::LineEnding::crlf});
+    EXPECT_EQ(p->parse("a,b\r\n"), ParseStatus::complete);
+    EXPECT_EQ(p->peek_fields(), (std::vector<std::string>{"a","b"}));
+}
+
+TEST(SimpleParserLineEndingTest, CRLF_Accepts_LF_Only_As_Well_Lenient) {
+    auto p = make_parser({.has_quoting = false, .line_ending = Config::LineEnding::crlf});
+    EXPECT_EQ(p->parse("a,b\n"), ParseStatus::complete);
+    EXPECT_EQ(p->peek_fields(), (std::vector<std::string>{"a","b"}));
+}
+
+TEST(SimpleParserLineEndingTest, CRLF_EmptyLine_DoesNotCrash_AndConsumesOneRecord) {
+    auto p = make_parser({.has_quoting = false, .line_ending = Config::LineEnding::crlf});
+    EXPECT_EQ(p->parse("\r\n"), ParseStatus::complete);
+    EXPECT_EQ(p->peek_fields(), (std::vector<std::string>{}));
+    EXPECT_EQ(p->consumed(), 2u);
+}
+
+TEST(SimpleParserLineEndingTest, CRLF_EmptyLine_WithLFOnly_DoesNotCrash) {
+    auto p = make_parser({.has_quoting = false, .line_ending = Config::LineEnding::crlf});
+    EXPECT_EQ(p->parse("\n"), ParseStatus::complete);
+    EXPECT_EQ(p->peek_fields(), (std::vector<std::string>{}));
+    EXPECT_EQ(p->consumed(), 1u);
+}
+
+TEST(SimpleParserLineEndingTest, CRLF_ConsumesTwoBytes_ForCRLF) {
+    auto p = make_parser({.has_quoting = false, .line_ending = Config::LineEnding::crlf});
+    EXPECT_EQ(p->parse("a,b\r\nc,d\r\n"), ParseStatus::complete);
+    EXPECT_EQ(p->peek_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(p->consumed(), 5u); // "a,b\r\n" = 5
+}
+
+TEST(SimpleParserLineEndingTest, CRLF_MultipleRecordsInOneBuffer_ConsumesOnlyFirst) {
+    auto p = make_parser({.has_quoting = false, .line_ending = Config::LineEnding::crlf});
+
+    EXPECT_EQ(p->parse("a,b\r\nc,d\r\n"), ParseStatus::complete);
+    EXPECT_EQ(p->peek_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(p->consumed(), 5u);
+
+    p->reset();
+    EXPECT_EQ(p->parse("c,d\r\n"), ParseStatus::complete);
+    EXPECT_EQ(p->peek_fields(), (std::vector<std::string>{"c","d"}));
+    EXPECT_EQ(p->consumed(), 5u);
+}
+
+TEST(SimpleParserLineEndingTest, CRLF_PartialAcrossChunks_CRThenLF) {
+    auto p = make_parser({.has_quoting = false, .line_ending = Config::LineEnding::crlf});
+
+    EXPECT_EQ(p->parse("a,b\r"), ParseStatus::need_more_data);
+    // In your current parser, this will have inserted fields already and marked incomplete;
+    // final newline completes the record.
+    EXPECT_EQ(p->parse("\n"), ParseStatus::complete);
+
+    EXPECT_EQ(p->move_fields(), (std::vector<std::string>{"a","b"}));
+}
+
+// ============================================================
+// CR-only mode (if you support it)
+// ============================================================
+
+TEST(SimpleParserLineEndingTest, CR_Mode_Parses_CR_Terminated_Line) {
+    auto p = make_parser({.has_quoting = false, .line_ending = Config::LineEnding::cr});
+    EXPECT_EQ(p->parse("a,b\rc,d\r"), ParseStatus::complete);
+    EXPECT_EQ(p->peek_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(p->consumed(), 4u); // "a,b\r" = 4
+}
+
+TEST(SimpleParserLineEndingTest, CR_Mode_DoesNotTreat_LF_AsTerminator) {
+    auto p = make_parser({.has_quoting = false, .line_ending = Config::LineEnding::cr});
+    EXPECT_EQ(p->parse("a,b\n"), ParseStatus::need_more_data);
+    EXPECT_EQ(p->consumed(), 4u); // your parser consumes whole buffer when no terminator found
+    EXPECT_EQ(p->peek_fields(), (std::vector<std::string>{"a","b\n"}));
+}
+
+// ============================================================
+// Regression: no UB when newline not found
+// (this catches the "compute newline_pos before nullptr-check" bug)
+// ============================================================
+
+TEST(SimpleParserLineEndingTest, Regression_NoNewlinePtr_Nullptr_IsHandled) {
+    auto p = make_parser({.has_quoting = false, .line_ending = Config::LineEnding::crlf});
+    EXPECT_EQ(p->parse("abc"), ParseStatus::need_more_data);
+    EXPECT_EQ(p->consumed(), 3u);
+    EXPECT_EQ(p->peek_fields(), (std::vector<std::string>{"abc"}));
+}
+
+TEST(SimpleParserLineEndingTest, CRLF_SplitAcrossChunks_CRThenLF_StripsCR) {
+    auto p = make_parser({.has_quoting = false, .line_ending = Config::LineEnding::crlf});
+
+    EXPECT_EQ(p->parse("a,b\r"), ParseStatus::need_more_data);
+    EXPECT_EQ(p->peek_fields(), (std::vector<std::string>{"a", "b\r"}));
+
+    EXPECT_EQ(p->parse("\n"), ParseStatus::complete);
+    EXPECT_EQ(p->move_fields(), (std::vector<std::string>{"a", "b"}));
+}
