@@ -44,12 +44,9 @@ ParseStatus SimpleParser::parse(std::string_view buffer) {
     auto line = buffer.substr(0, newline_pos);
 
     if (config_.line_ending == Config::LineEnding::crlf) {
-        // In CRLF mode, we searched for '\n' (term == '\n').
-        // Require preceding '\r' in the LINE view.
-        if (newline_pos == 0 || buffer[newline_pos - 1] != '\r')
-            return ParseStatus::fail;
-
-        line.remove_suffix(1);
+        if (!line.empty() && line.back() == '\r') {
+            line.remove_suffix(1); // strip CR if present [optional]
+        }
     }
 
     consumed_ = newline_pos + 1;
