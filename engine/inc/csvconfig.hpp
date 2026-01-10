@@ -12,7 +12,7 @@ struct Config {
     ParseMode parse_mode = ParseMode::strict;
 
     enum class LineEnding { lf, crlf, cr };
-    LineEnding line_ending = LineEnding::crlf;
+    LineEnding line_ending = LineEnding::lf;
 
     enum class RecordSizePolicy {
         flexible,          // Allow any size (default for compatibility)
