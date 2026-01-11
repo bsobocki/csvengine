@@ -23,10 +23,9 @@ struct Config {
     RecordSizePolicy record_size_policy = RecordSizePolicy::strict_to_first;
     size_t record_size = 0; // Value used to specify expected size
 
-    bool is_line_ending(char ch) const {
+    int is_line_ending(char ch) const {
         switch (line_ending) {
             case LineEnding::crlf:
-                return ch == '\n' || ch == '\r';
             case LineEnding::lf:
                 return ch == '\n';
             case LineEnding::cr:
