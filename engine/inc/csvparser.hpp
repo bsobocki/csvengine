@@ -31,6 +31,7 @@ protected:
     std::string err_msg_;
     std::vector<std::string> fields_;
 
+    bool pending_cr_ = false;
     bool incomplete_last_read_ = false;
     size_t consumed_ = 0;
 };

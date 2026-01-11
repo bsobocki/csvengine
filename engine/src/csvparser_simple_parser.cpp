@@ -36,6 +36,9 @@ ParseStatus SimpleParser::parse(std::string_view buffer) {
             insert_fields(fields);
             consumed_ = buffer.size();
             incomplete_last_read_ = true;
+            if (buffer.back() == '\r') {
+                pending_cr_ = true;
+            }
         }
         return ParseStatus::need_more_data;
     }
@@ -52,10 +55,9 @@ ParseStatus SimpleParser::parse(std::string_view buffer) {
     consumed_ = newline_pos + 1;
 
     if (line.empty()) {
-        if (config_.line_ending == Config::LineEnding::crlf && incomplete_last_read_ &&
-            !fields_.empty() && !fields_.back().empty() && fields_.back().back() == '\r')
-        {
+        if (config_.line_ending == Config::LineEnding::crlf && pending_cr_) {
             fields_.back().pop_back();
+            pending_cr_ = false;
         }
         incomplete_last_read_ = false;
         return ParseStatus::complete;
