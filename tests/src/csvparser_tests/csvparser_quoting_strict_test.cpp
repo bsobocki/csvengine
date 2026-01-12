@@ -9,6 +9,14 @@ using namespace csv;
 class StrictParserTest : public ::testing::Test {
 protected:
     std::unique_ptr<Parser> strict_parser = make_parser({.parse_mode = Config::ParseMode::strict});
+    std::unique_ptr<Parser> strict_parser_crlf = make_parser({
+        .parse_mode = Config::ParseMode::strict,
+        .line_ending = Config::LineEnding::crlf
+    });
+    std::unique_ptr<Parser> strict_parser_cr = make_parser({
+        .parse_mode = Config::ParseMode::strict,
+        .line_ending = Config::LineEnding::cr
+    });
     std::unique_ptr<Parser> semi_parser = make_parser({.delimiter = ';'});
 
     void ExpectParse(std::unique_ptr<Parser>& parser,
@@ -330,4 +338,121 @@ TEST_F(StrictParserTest, Edge_VeryLongQuotedField) {
     std::string long_field(10000, 'a');
     std::string input = "\"" + long_field + "\"\n";
     ExpectParse(strict_parser, input, ParseStatus::complete, {long_field});
+}
+
+
+// ============================================================
+// CRLF (strict) behavior
+// ============================================================
+
+TEST_F(StrictParserTest, CRLF_Accepts_CRLF_Strips_CR) {
+    EXPECT_EQ(strict_parser_crlf->parse("a,b\r\n"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a","b"}));
+}
+
+TEST_F(StrictParserTest, CRLF_DoNotAccepts_LF_Only) {
+    EXPECT_EQ(strict_parser_crlf->parse("a,b\n"), ParseStatus::fail);
+}
+
+TEST_F(StrictParserTest, CRLF_EmptyLine_DoesNotCrash_AndConsumesOneRecord) {
+    EXPECT_EQ(strict_parser_crlf->parse("\r\n"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{""}));
+    EXPECT_EQ(strict_parser_crlf->consumed(), 2u);
+}
+
+TEST_F(StrictParserTest, CRLF_EmptyLine_WithLFOnly_Crash) {
+    EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::fail);
+}
+
+TEST_F(StrictParserTest, CRLF_ConsumesTwoBytes_ForCRLF) {
+    EXPECT_EQ(strict_parser_crlf->parse("a,b\r\nc,d\r\n"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(strict_parser_crlf->consumed(), 5u); // "a,b\r\n" = 5
+}
+
+TEST_F(StrictParserTest, CRLF_MultipleRecordsInOneBuffer_ConsumesOnlyFirst) {
+    EXPECT_EQ(strict_parser_crlf->parse("a,b\r\nc,d\r\n"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(strict_parser_crlf->consumed(), 5u);
+
+    strict_parser_crlf->reset();
+    EXPECT_EQ(strict_parser_crlf->parse("c,d\r\n"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"c","d"}));
+    EXPECT_EQ(strict_parser_crlf->consumed(), 5u);
+}
+
+TEST_F(StrictParserTest, CRLF_PartialAcrossChunks_CRThenLF) {
+    EXPECT_EQ(strict_parser_crlf->parse("a,b\r"), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a","b\r"}));
+
+    EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a","b"}));
+}
+
+// ============================================================
+// CR-only mode (if you support it)
+// ============================================================
+
+TEST_F(StrictParserTest, CR_Mode_Parses_CR_Terminated_Line) {
+    EXPECT_EQ(strict_parser_cr->parse("a,b\rc,d\r"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser_cr->peek_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(strict_parser_cr->consumed(), 4u);
+}
+
+TEST_F(StrictParserTest, CR_Mode_DoesNotTreat_LF_AsTerminator) {
+    EXPECT_EQ(strict_parser_cr->parse("a,b\n"), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser_cr->consumed(), 4u);
+    EXPECT_EQ(strict_parser_cr->peek_fields(), (std::vector<std::string>{"a","b\n"}));
+}
+
+// ============================================================
+// Regression: no UB when newline not found
+// ============================================================
+
+TEST_F(StrictParserTest, Regression_NoNewlinePtr_Nullptr_IsHandled) {
+    EXPECT_EQ(strict_parser_crlf->parse("abc"), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser_crlf->consumed(), 3u);
+    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"abc"}));
+}
+
+TEST_F(StrictParserTest, CRLF_SplitAcrossChunks_CRThenLF_StripsCR) {
+    EXPECT_EQ(strict_parser_crlf->parse("a,b\r"), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a", "b\r"}));
+
+    EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a", "b"}));
+}
+
+TEST_F(StrictParserTest, CRLF_SplitAfterClosingQuote_BehaviorIsUnstable) {
+    EXPECT_EQ(strict_parser_crlf->parse("\"a\"\r"), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
+
+    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a"}));
+}
+
+TEST_F(StrictParserTest, PendingCR_PopsWithoutChecks) {
+    // Force a situation where pending_cr_ becomes true but fields_ may not be safe
+    // (depends on your parser internals / reset use). Example: if you reset between chunks:
+    EXPECT_EQ(strict_parser_crlf->parse("a\r"), ParseStatus::need_more_data);
+    strict_parser_crlf->reset();                   // reader does this per record; other code might too
+    EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::fail); // fields_ empty -> back() UB
+}
+
+TEST_F(StrictParserTest, NeedMoreDataMustConsumeOrProgress) {
+    EXPECT_EQ(strict_parser_crlf->parse("\"a\"\r"), ParseStatus::need_more_data);
+    EXPECT_GT(strict_parser_crlf->consumed(), 0u); // should progress; currently likely 0
+}
+
+TEST_F(StrictParserTest, CRLF_SplitAcrossBuffers_OutsideQuotes) {
+    EXPECT_EQ(strict_parser_crlf->parse("a,b\r"), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
+
+    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a","b"}));
+}
+
+TEST_F(StrictParserTest, CRLF_QuoteThenCRAtEnd_ProgressAndCorrectConsume) {
+    EXPECT_EQ(strict_parser_crlf->parse("\"a\"\r"), ParseStatus::need_more_data);
+    EXPECT_GT(strict_parser_crlf->consumed(), 0u);          // must not be 0
+    EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a"}));
 }

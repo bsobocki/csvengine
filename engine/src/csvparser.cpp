@@ -20,6 +20,7 @@ std::unique_ptr<Parser> make_parser(const Config& config) {
 
 void Parser::reset() noexcept {
     incomplete_last_read_ = false;
+    pending_cr_ = false;
     fields_.clear();
     consumed_ = 0;
     err_msg_.clear();

@@ -15,10 +15,16 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
     auto field_start = buff_it;
     size_t current_field_quote_literals = 0;    
 
+    const auto remove_last_saved_char = [this]() {
+        if (!fields_.empty() && !fields_.back().empty()) {
+            fields_.back().pop_back();
+        }
+    };
+    const auto is_begin   = [begin = buffer.begin()](auto it) { return it == begin; };
     const auto is_end     = [end = buffer.end()](auto it) { return it == end; };
-    const auto is_quote   = [this](char c)  { return c == config_.quote_char; };
-    const auto is_delim   = [this](char c)  { return c == config_.delimiter; };
-    const auto is_newline = [this](char c)  { return config_.is_line_ending(c); };
+    const auto is_quote   = [this](char c) { return c == config_.quote_char; };
+    const auto is_delim   = [this](char c) { return c == config_.delimiter; };
+    const auto is_newline = [this](char c) { return config_.is_line_ending(c); };
     const auto consume    = [&](size_t consume_size = 1) {
         buff_it += consume_size;
         consumed_ += consume_size;
@@ -51,6 +57,21 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
         incomplete_last_read_ = false;
     };
 
+    if (config_.line_ending == Config::LineEnding::crlf && pending_cr_) {
+        pending_cr_ = false;
+        incomplete_last_read_ = false;
+        if (!is_newline(*buff_it)) {
+            return ParseStatus::fail;
+        }
+        remove_last_saved_char();
+        if (pending_quote_) {
+            remove_last_saved_char();
+            pending_quote_ = false;
+        }
+        consume();
+        return ParseStatus::complete;
+    }
+
     if (pending_quote_) {
         pending_quote_ = false;
 
@@ -64,6 +85,7 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
             }
         }
         else if (!is_delim(*buff_it) && !is_newline(*buff_it)) {
+            consume();
             return ParseStatus::fail;
         }
         else if (is_newline(*buff_it)) {
@@ -76,10 +98,19 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
             incomplete_last_read_ = false;
         }
     }
-    
+
     while (!is_end(buff_it)) {
         if (is_newline(*buff_it) && !in_quotes_) {
-            add_field(buff_it);
+            auto field_end = buff_it;
+            if (config_.line_ending == Config::LineEnding::crlf) {
+                if (!is_begin(field_end) && *(field_end-1) == '\r') {
+                    field_end--;
+                }
+                else {
+                    return ParseStatus::fail;
+                }
+            }
+            add_field(field_end);
             consume();
             return ParseStatus::complete;
         }
@@ -96,8 +127,9 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
 
             // double quote => literal
             if (in_quotes_ && !is_end(next_buff_it) && is_quote(*next_buff_it)) {
-                consume(); // skip one char to make literal
+                consume(2); // skip one char to make literal
                 current_field_quote_literals++;
+                continue;
             }
             // one quote => quoting
             else if (in_quotes_) {
@@ -106,6 +138,21 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
                 if (!is_end(next_buff_it)) {
                     bool is_next_delim = is_delim(*next_buff_it);
                     bool is_next_newline = is_newline(*next_buff_it);
+
+                    if (config_.line_ending == Config::LineEnding::crlf && *next_buff_it == '\r') {
+                        consume(2);
+                        if (!is_end((buff_it))) {
+                            auto status = is_newline(*(buff_it)) ? ParseStatus::complete : ParseStatus::fail;
+                            consume();
+                            return status;
+                        }
+                        else {
+                            add_field(buff_it);
+                            pending_cr_ = true;
+                            pending_quote_ = true;
+                            return ParseStatus::need_more_data;
+                        }
+                    }
 
                     // wrong quoting => data after quotes
                     if (!is_next_delim && !is_next_newline) {
@@ -146,6 +193,12 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
         }
         // skip every other character 
         consume();
+    }
+
+    if (config_.line_ending == Config::LineEnding::crlf && !in_quotes_ &&
+        !buffer.empty() && buffer.back() == '\r')
+    {
+        pending_cr_ = true;
     }
 
     add_field(buff_it);
