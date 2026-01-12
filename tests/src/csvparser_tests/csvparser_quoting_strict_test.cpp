@@ -423,10 +423,11 @@ TEST_F(StrictParserTest, CRLF_SplitAcrossChunks_CRThenLF_StripsCR) {
     EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a", "b"}));
 }
 
-TEST_F(StrictParserTest, CRLF_SplitAfterClosingQuote_BehaviorIsUnstable) {
+TEST_F(StrictParserTest, CRLF_SplitAfterClosingQuote) {
     EXPECT_EQ(strict_parser_crlf->parse("\"a\"\r"), ParseStatus::need_more_data);
-    EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a\r"}));
 
+    EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
     EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a"}));
 }
 
@@ -455,4 +456,46 @@ TEST_F(StrictParserTest, CRLF_QuoteThenCRAtEnd_ProgressAndCorrectConsume) {
     EXPECT_GT(strict_parser_crlf->consumed(), 0u);          // must not be 0
     EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
     EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a"}));
+}
+
+TEST_F(StrictParserTest, SplitOutsideQuotes_CRThenLF_RemovesCR) {
+    EXPECT_EQ(strict_parser_crlf->parse("a,b\r"), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a", "b\r"}));
+    EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a","b"}));
+}
+
+TEST_F(StrictParserTest, SplitOutsideQuotes_CRThenChar_CRasData) {
+    EXPECT_EQ(strict_parser_crlf->parse("a,b\r"), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a", "b\r"}));
+    EXPECT_EQ(strict_parser_crlf->parse("a\r\n"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a","b\ra"}));
+}
+
+TEST_F(StrictParserTest, EmptyLineSplit_CRThenLF_ProducesEmptyRecord) {
+    EXPECT_EQ(strict_parser_crlf->parse("\r"), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{""}));
+}
+
+TEST_F(StrictParserTest, PendingCR_NotFollowedByLF_CRasData) {
+    EXPECT_EQ(strict_parser_crlf->parse("a\r"), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser_crlf->parse("x"), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a\rx"}));
+}
+
+TEST_F(StrictParserTest, ClosingQuoteThenCRLF_InSameBuffer) {
+    EXPECT_EQ(strict_parser_crlf->parse("\"a\"\r\n"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a"}));
+}
+
+TEST_F(StrictParserTest, ClosingQuoteThenCR_SplitThenLF_Completes) {
+    EXPECT_EQ(strict_parser_crlf->parse("\"a\"\r"), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a"}));
+}
+
+TEST_F(StrictParserTest, CRatTheEndOfBuffer_needMoreData_OnlyDataWithCRasData) {
+    EXPECT_EQ(strict_parser_crlf->parse("\"a\"\r"), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a\r"}));
 }

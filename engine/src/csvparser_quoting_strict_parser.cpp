@@ -15,11 +15,6 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
     auto field_start = buff_it;
     size_t current_field_quote_literals = 0;    
 
-    const auto remove_last_saved_char = [this]() {
-        if (!fields_.empty() && !fields_.back().empty()) {
-            fields_.back().pop_back();
-        }
-    };
     const auto is_begin   = [begin = buffer.begin()](auto it) { return it == begin; };
     const auto is_end     = [end = buffer.end()](auto it) { return it == end; };
     const auto is_quote   = [this](char c) { return c == config_.quote_char; };
@@ -28,6 +23,11 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
     const auto consume    = [&](size_t consume_size = 1) {
         buff_it += consume_size;
         consumed_ += consume_size;
+    };
+    const auto remove_last_saved_char = [this]() {
+        if (!fields_.empty() && !fields_.back().empty()) {
+            fields_.back().pop_back();
+        }
     };
     const auto add_field =  [&](auto end_it) {
         if (!incomplete_last_read_) {
@@ -59,17 +59,17 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
 
     if (config_.line_ending == Config::LineEnding::crlf && pending_cr_) {
         pending_cr_ = false;
-        incomplete_last_read_ = false;
         if (!is_newline(*buff_it)) {
-            return ParseStatus::fail;
+            if (pending_quote_) {
+                return ParseStatus::fail;
+            }
+            consume();
         }
-        remove_last_saved_char();
-        if (pending_quote_) {
+        else {
+            consume();
             remove_last_saved_char();
-            pending_quote_ = false;
+            return ParseStatus::complete;
         }
-        consume();
-        return ParseStatus::complete;
     }
 
     if (pending_quote_) {
@@ -140,14 +140,19 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
                     bool is_next_newline = is_newline(*next_buff_it);
 
                     if (config_.line_ending == Config::LineEnding::crlf && *next_buff_it == '\r') {
-                        consume(2);
-                        if (!is_end((buff_it))) {
-                            auto status = is_newline(*(buff_it)) ? ParseStatus::complete : ParseStatus::fail;
-                            consume();
-                            return status;
+                        if (!is_end((buff_it+2))) {
+                            // if we have \r\n after quoting then just add field and complete
+                            if (is_newline(*(buff_it+2))) {
+                                add_field(buff_it);
+                                consume(3);
+                                return ParseStatus::complete;
+                            }
+                            return ParseStatus::fail;
                         }
                         else {
                             add_field(buff_it);
+                            consume(2);
+                            fields_.back().push_back('\r');
                             pending_cr_ = true;
                             pending_quote_ = true;
                             return ParseStatus::need_more_data;
