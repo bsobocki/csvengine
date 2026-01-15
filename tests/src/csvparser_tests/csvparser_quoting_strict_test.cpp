@@ -465,11 +465,11 @@ TEST_F(StrictParserTest, SplitOutsideQuotes_CRThenLF_RemovesCR) {
     EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a","b"}));
 }
 
-TEST_F(StrictParserTest, SplitOutsideQuotes_CRThenChar_CRasData) {
+TEST_F(StrictParserTest, SplitOutsideQuotes_CRThenChar_Fail) {
     EXPECT_EQ(strict_parser_crlf->parse("a,b\r"), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a", "b\r"}));
-    EXPECT_EQ(strict_parser_crlf->parse("a\r\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a","b\ra"}));
+    EXPECT_EQ(strict_parser_crlf->parse("a\r\n"), ParseStatus::fail);
+    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a","b\r"}));
 }
 
 TEST_F(StrictParserTest, EmptyLineSplit_CRThenLF_ProducesEmptyRecord) {
@@ -478,10 +478,10 @@ TEST_F(StrictParserTest, EmptyLineSplit_CRThenLF_ProducesEmptyRecord) {
     EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{""}));
 }
 
-TEST_F(StrictParserTest, PendingCR_NotFollowedByLF_CRasData) {
+TEST_F(StrictParserTest, PendingCR_NotFollowedByLF_Fail) {
     EXPECT_EQ(strict_parser_crlf->parse("a\r"), ParseStatus::need_more_data);
-    EXPECT_EQ(strict_parser_crlf->parse("x"), ParseStatus::need_more_data);
-    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a\rx"}));
+    EXPECT_EQ(strict_parser_crlf->parse("x"), ParseStatus::fail);
+    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a\r"}));
 }
 
 TEST_F(StrictParserTest, ClosingQuoteThenCRLF_InSameBuffer) {

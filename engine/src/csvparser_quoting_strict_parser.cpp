@@ -7,7 +7,6 @@ namespace csv {
 StrictQuotingParser::StrictQuotingParser(const Config& config): QuotingParser(config) {}
 
 // TODO: CODE REFACTOR (split into functions + extract common logic and code into QuotingParser class)
-// STRICT: IN CRLF MODE \r IS NOT A DATA (common practice) - remove treating it as data
 
 ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
     consumed_ = 0;
@@ -63,10 +62,7 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
     if (config_.line_ending == Config::LineEnding::crlf && pending_cr_) {
         pending_cr_ = false;
         if (!is_newline(*buff_it)) {
-            if (pending_quote_) {
-                return ParseStatus::fail;
-            }
-            consume();
+            return ParseStatus::fail;
         }
         else {
             consume();
