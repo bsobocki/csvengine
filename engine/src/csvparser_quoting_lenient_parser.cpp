@@ -6,6 +6,8 @@ namespace csv {
 
 LenientQuotingParser::LenientQuotingParser(const Config& config): QuotingParser(config) {}
 
+// TODO: CODE REFACTOR (split into functions + extract common logic and code into QuotingParser class)
+
 ParseStatus LenientQuotingParser::parse(std::string_view buffer) {
     // lenient parse will treat each quote character outside valid quote as literal
     // valid quote starts at the beggining of the field and ends at the end of the field
@@ -17,6 +19,7 @@ ParseStatus LenientQuotingParser::parse(std::string_view buffer) {
     auto buff_it = buffer.begin();
     auto field_start = buff_it;
 
+    const auto is_begin   = [begin = buffer.begin()](auto it) { return it == begin; };
     const auto is_end     = [end = buffer.end()](auto it) { return it == end; };
     const auto is_quote   = [this](char c)  { return c == config_.quote_char; };
     const auto is_delim   = [this](char c)  { return c == config_.delimiter; };
@@ -24,6 +27,11 @@ ParseStatus LenientQuotingParser::parse(std::string_view buffer) {
     const auto consume    = [&](size_t consume_size = 1) {
         buff_it += consume_size;
         consumed_ += consume_size;
+    };
+    const auto remove_last_saved_char = [this]() {
+        if (!fields_.empty() && !fields_.back().empty()) {
+            fields_.back().pop_back();
+        }
     };
     const auto add_field = [&](auto end_it) {
         if (!incomplete_last_read_) {
@@ -71,6 +79,16 @@ ParseStatus LenientQuotingParser::parse(std::string_view buffer) {
         incomplete_last_read_ = false;
     };
 
+    if (config_.line_ending == Config::LineEnding::crlf && pending_cr_) {
+        pending_cr_ = false;
+        if (is_newline(*buff_it)) {
+            consume();
+            remove_last_saved_char();
+            return ParseStatus::complete;
+        }
+        // in other case just treat \r as data
+    }
+
     if (pending_quote_) {
         pending_quote_ = false;
 
@@ -106,7 +124,13 @@ ParseStatus LenientQuotingParser::parse(std::string_view buffer) {
 
     while (!is_end(buff_it)) {
         if (is_newline(*buff_it) && !in_quotes_) {
-            add_field(buff_it);
+            auto field_end = buff_it;
+            if (config_.line_ending == Config::LineEnding::crlf) {
+                if (!is_begin(field_end) && *(field_end-1) == '\r') {
+                    field_end--;
+                }
+            }
+            add_field(field_end);
             consume();
             return ParseStatus::complete;
         }
@@ -143,6 +167,12 @@ ParseStatus LenientQuotingParser::parse(std::string_view buffer) {
         }
         // skip every other character
         consume();
+    }
+
+    if (config_.line_ending == Config::LineEnding::crlf && !in_quotes_ &&
+            !buffer.empty() && buffer.back() == '\r')
+    {
+        pending_cr_ = true;
     }
 
     add_field(buff_it);
