@@ -511,3 +511,81 @@ TEST_F(StrictParserTest, CRatTheEndOfBuffer_needMoreData_OnlyDataWithCRasData) {
     EXPECT_EQ(strict_parser_crlf->parse("\"a\"\r"), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a\r"}));
 }
+
+// ============================================================
+// Additional tests
+// ============================================================
+
+TEST_F(StrictParserTest, EOF_NoNewline_Unquoted_ReturnsNeedMoreData) {
+    ExpectParse(strict_parser, "a,b,c", ParseStatus::need_more_data, {"a","b","c"});
+}
+
+TEST_F(StrictParserTest, EOF_NoNewline_QuotedClosed_ReturnsNeedMoreData) {
+    ExpectParse(strict_parser, "\"a\",\"b\"", ParseStatus::need_more_data, {"a","b"});
+}
+
+TEST_F(StrictParserTest, TrailingDelimiter_EndOfBuffer_NeedMoreData_IncludesEmptyField) {
+    ExpectParse(strict_parser, "a,", ParseStatus::need_more_data, {"a",""});
+}
+
+TEST_F(StrictParserTest, TrailingDelimiter_BeforeNewline_Completes_IncludesEmptyField) {
+    ExpectParse(strict_parser, "a,\n", ParseStatus::complete, {"a",""});
+}
+
+TEST_F(StrictParserTest, Buffer_SplitEmptyQuotedField) {
+    EXPECT_EQ(strict_parser->parse("\""), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser->parse("\"\n"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser->move_fields(), (std::vector<std::string>{""}));
+}
+
+TEST_F(StrictParserTest, Buffer_Split_EmptyQuotedField_ThenDelimiter) {
+    EXPECT_EQ(strict_parser->parse("\"\""), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser->parse(",x\n"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser->move_fields(), (std::vector<std::string>{"", "x"}));
+}
+
+TEST_F(StrictParserTest, Buffer_Split_AfterDelimiter_BeforeOpenQuote) {
+    EXPECT_EQ(strict_parser->parse("a,"), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser->parse("\"b\"\n"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser->move_fields(), (std::vector<std::string>{"a","b"}));
+}
+
+TEST_F(StrictParserTest, Buffer_ClosingQuoteAtEnd_FollowedByDelimiter) {
+    EXPECT_EQ(strict_parser->parse("\"a\""), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser->parse(",b\n"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser->move_fields(), (std::vector<std::string>{"a","b"}));
+}
+
+TEST_F(StrictParserTest, Strict_SpaceBeforeQuote_AfterDelimiter_Fails) {
+    ExpectParse(strict_parser, "a, \"b\"\n", ParseStatus::fail);
+}
+
+TEST_F(StrictParserTest, Strict_GarbageAfterDelimiterBeforeQuote_Fails) {
+    ExpectParse(strict_parser, "a,x\"b\"\n", ParseStatus::fail);
+}
+
+TEST_F(StrictParserTest, LF_MultipleRecordsInOneBuffer_ConsumesOnlyFirst) {
+    ExpectParse(strict_parser, "a,b\nc,d\n", ParseStatus::complete, {"a","b"});
+    EXPECT_EQ(strict_parser->consumed(), 4u); // "a,b\n"
+}
+
+TEST_F(StrictParserTest, CRLF_CRInsideQuotes_IsData) {
+    ExpectParse(strict_parser_crlf, "\"a\rb\"\r\n", ParseStatus::complete, {"a\rb"});
+}
+
+TEST_F(StrictParserTest, CRLF_QuotedFieldThenDelimiterThenCRLF) {
+    ExpectParse(strict_parser_crlf, "\"a\",b\r\n", ParseStatus::complete, {"a","b"});
+}
+
+TEST_F(StrictParserTest, NeedMoreData_ConsumedCountsBytes_LF) {
+    EXPECT_EQ(strict_parser->parse("ab"), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser->consumed(), 2u);
+}
+
+TEST_F(StrictParserTest, Quoted_FieldStartsWithDelimiterChar) {
+    ExpectParse(strict_parser, "\",\"\n", ParseStatus::complete, {","});
+}
+
+TEST_F(StrictParserTest, Quoted_FieldStartsWithNewlineChar) {
+    ExpectParse(strict_parser, "\"\n\"\n", ParseStatus::complete, {"\n"});
+}
