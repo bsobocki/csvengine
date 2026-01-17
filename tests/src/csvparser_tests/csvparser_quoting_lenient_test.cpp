@@ -650,3 +650,81 @@ TEST_F(LenientParserTest, CRatTheEndOfBuffer_needMoreData_OnlyDataWithCRasData) 
     EXPECT_EQ(lenient_parser_crlf->parse("\"a\"\r"), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser_crlf->move_fields(), (std::vector<std::string>{"a\r"}));
 }
+
+// ============================================================
+// Additional Tests
+// ============================================================
+
+TEST_F(LenientParserTest, EOF_NoNewline_Unquoted_ReturnsNeedMoreData) {
+    ExpectParse(lenient_parser, "a,b,c", ParseStatus::need_more_data, {"a","b","c"});
+}
+
+TEST_F(LenientParserTest, EOF_NoNewline_QuotedClosed_ReturnsNeedMoreData) {
+    ExpectParse(lenient_parser, "\"a\",\"b\"", ParseStatus::need_more_data, {"a","b"});
+}
+
+TEST_F(LenientParserTest, TrailingDelimiter_EndOfBuffer_NeedMoreData_IncludesEmptyField) {
+    ExpectParse(lenient_parser, "a,", ParseStatus::need_more_data, {"a",""});
+}
+
+TEST_F(LenientParserTest, TrailingDelimiter_BeforeNewline_Completes_IncludesEmptyField) {
+    ExpectParse(lenient_parser, "a,\n", ParseStatus::complete, {"a",""});
+}
+
+TEST_F(LenientParserTest, Buffer_SplitEmptyQuotedField) {
+    EXPECT_EQ(lenient_parser->parse("\""), ParseStatus::need_more_data);
+    EXPECT_EQ(lenient_parser->parse("\"\n"), ParseStatus::complete);
+    EXPECT_EQ(lenient_parser->move_fields(), (std::vector<std::string>{""}));
+}
+
+TEST_F(LenientParserTest, Buffer_Split_EmptyQuotedField_ThenDelimiter) {
+    EXPECT_EQ(lenient_parser->parse("\"\""), ParseStatus::need_more_data);
+    EXPECT_EQ(lenient_parser->parse(",x\n"), ParseStatus::complete);
+    EXPECT_EQ(lenient_parser->move_fields(), (std::vector<std::string>{"", "x"}));
+}
+
+TEST_F(LenientParserTest, Buffer_Split_AfterDelimiter_BeforeOpenQuote) {
+    EXPECT_EQ(lenient_parser->parse("a,"), ParseStatus::need_more_data);
+    EXPECT_EQ(lenient_parser->parse("\"b\"\n"), ParseStatus::complete);
+    EXPECT_EQ(lenient_parser->move_fields(), (std::vector<std::string>{"a","b"}));
+}
+
+TEST_F(LenientParserTest, Buffer_ClosingQuoteAtEnd_FollowedByDelimiter) {
+    EXPECT_EQ(lenient_parser->parse("\"a\""), ParseStatus::need_more_data);
+    EXPECT_EQ(lenient_parser->parse(",b\n"), ParseStatus::complete);
+    EXPECT_EQ(lenient_parser->move_fields(), (std::vector<std::string>{"a","b"}));
+}
+
+TEST_F(LenientParserTest, Lenient_SpaceBeforeQuote_AfterDelimiter_Complete) {
+    ExpectParse(lenient_parser, "a, \"b\"\n", ParseStatus::complete, (std::vector<std::string>{"a"," \"b\""}));
+}
+
+TEST_F(LenientParserTest, Lenient_GarbageAfterDelimiterBeforeQuote_Complete) {
+    ExpectParse(lenient_parser, "a,x\"b\"\n", ParseStatus::complete, (std::vector<std::string>{"a","x\"b\""}));
+}
+
+TEST_F(LenientParserTest, LF_MultipleRecordsInOneBuffer_ConsumesOnlyFirst) {
+    ExpectParse(lenient_parser, "a,b\nc,d\n", ParseStatus::complete, {"a","b"});
+    EXPECT_EQ(lenient_parser->consumed(), 4u); // "a,b\n"
+}
+
+TEST_F(LenientParserTest, CRLF_CRInsideQuotes_IsData) {
+    ExpectParse(lenient_parser_crlf, "\"a\rb\"\r\n", ParseStatus::complete, {"a\rb"});
+}
+
+TEST_F(LenientParserTest, CRLF_QuotedFieldThenDelimiterThenCRLF) {
+    ExpectParse(lenient_parser_crlf, "\"a\",b\r\n", ParseStatus::complete, {"a","b"});
+}
+
+TEST_F(LenientParserTest, NeedMoreData_ConsumedCountsBytes_LF) {
+    EXPECT_EQ(lenient_parser->parse("ab"), ParseStatus::need_more_data);
+    EXPECT_EQ(lenient_parser->consumed(), 2u);
+}
+
+TEST_F(LenientParserTest, Quoted_FieldStartsWithDelimiterChar) {
+    ExpectParse(lenient_parser, "\",\"\n", ParseStatus::complete, {","});
+}
+
+TEST_F(LenientParserTest, Quoted_FieldStartsWithNewlineChar) {
+    ExpectParse(lenient_parser, "\"\n\"\n", ParseStatus::complete, {"\n"});
+}
