@@ -17,6 +17,10 @@ protected:
         .parse_mode = Config::ParseMode::strict,
         .line_ending = Config::LineEnding::cr
     });
+    std::unique_ptr<Parser> strict_parser_lf = make_parser({
+        .parse_mode = Config::ParseMode::strict,
+        .line_ending = Config::LineEnding::lf
+    });
     std::unique_ptr<Parser> semi_parser = make_parser({.delimiter = ';'});
 
     void ExpectParse(std::unique_ptr<Parser>& parser,
@@ -367,7 +371,7 @@ TEST_F(StrictParserTest, CRLF_EmptyLine_WithLFOnly_Crash) {
 TEST_F(StrictParserTest, CRLF_ConsumesTwoBytes_ForCRLF) {
     EXPECT_EQ(strict_parser_crlf->parse("a,b\r\nc,d\r\n"), ParseStatus::complete);
     EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a","b"}));
-    EXPECT_EQ(strict_parser_crlf->consumed(), 5u); // "a,b\r\n" = 5
+    EXPECT_EQ(strict_parser_crlf->consumed(), 5u);
 }
 
 TEST_F(StrictParserTest, CRLF_MultipleRecordsInOneBuffer_ConsumesOnlyFirst) {
@@ -390,7 +394,7 @@ TEST_F(StrictParserTest, CRLF_PartialAcrossChunks_CRThenLF) {
 }
 
 // ============================================================
-// CR-only mode (if you support it)
+// CR-only mode
 // ============================================================
 
 TEST_F(StrictParserTest, CR_Mode_Parses_CR_Terminated_Line) {
@@ -406,7 +410,17 @@ TEST_F(StrictParserTest, CR_Mode_DoesNotTreat_LF_AsTerminator) {
 }
 
 // ============================================================
-// Regression: no UB when newline not found
+// LF-only mode
+// ============================================================
+
+TEST_F(StrictParserTest, LF_Mode_Treat_CR_AsData) {
+    EXPECT_EQ(strict_parser_lf->parse("a,b\r"), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser_lf->consumed(), 4u);
+    EXPECT_EQ(strict_parser_lf->peek_fields(), (std::vector<std::string>{"a","b\r"}));
+}
+
+// ============================================================
+// CRLF tests - strict behavior - \r cannot be treated as data
 // ============================================================
 
 TEST_F(StrictParserTest, Regression_NoNewlinePtr_Nullptr_IsHandled) {
@@ -432,16 +446,14 @@ TEST_F(StrictParserTest, CRLF_SplitAfterClosingQuote) {
 }
 
 TEST_F(StrictParserTest, PendingCR_PopsWithoutChecks) {
-    // Force a situation where pending_cr_ becomes true but fields_ may not be safe
-    // (depends on your parser internals / reset use). Example: if you reset between chunks:
     EXPECT_EQ(strict_parser_crlf->parse("a\r"), ParseStatus::need_more_data);
-    strict_parser_crlf->reset();                   // reader does this per record; other code might too
-    EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::fail); // fields_ empty -> back() UB
+    strict_parser_crlf->reset();  // pending_cr_ is false after reset()
+    EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::fail);
 }
 
-TEST_F(StrictParserTest, NeedMoreDataMustConsumeOrProgress) {
+TEST_F(StrictParserTest, NeedMoreDataMustConsume) {
     EXPECT_EQ(strict_parser_crlf->parse("\"a\"\r"), ParseStatus::need_more_data);
-    EXPECT_GT(strict_parser_crlf->consumed(), 0u); // should progress; currently likely 0
+    EXPECT_EQ(strict_parser_crlf->consumed(), 4);
 }
 
 TEST_F(StrictParserTest, CRLF_SplitAcrossBuffers_OutsideQuotes) {
@@ -453,7 +465,7 @@ TEST_F(StrictParserTest, CRLF_SplitAcrossBuffers_OutsideQuotes) {
 
 TEST_F(StrictParserTest, CRLF_QuoteThenCRAtEnd_ProgressAndCorrectConsume) {
     EXPECT_EQ(strict_parser_crlf->parse("\"a\"\r"), ParseStatus::need_more_data);
-    EXPECT_GT(strict_parser_crlf->consumed(), 0u);          // must not be 0
+    EXPECT_EQ(strict_parser_crlf->consumed(), 4u);
     EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
     EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a"}));
 }
