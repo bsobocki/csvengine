@@ -9,8 +9,6 @@ LenientQuotingParser::LenientQuotingParser(const Config& config): QuotingParser(
 // TODO: CODE REFACTOR (split into functions + extract common logic and code into QuotingParser class)
 
 ParseStatus LenientQuotingParser::parse(std::string_view buffer) {
-    // lenient parse will treat each quote character outside valid quote as literal
-    // valid quote starts at the beggining of the field and ends at the end of the field
     consumed_ = 0;
     bool add_field_quoted = false;
 
