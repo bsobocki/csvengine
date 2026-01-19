@@ -18,6 +18,12 @@ std::unique_ptr<Parser> make_parser(const Config& config) {
     return std::make_unique<SimpleParser>(config);
 }
 
+
+
+// ============================================================
+// Parser
+// ============================================================
+
 void Parser::reset() noexcept {
     incomplete_last_read_ = false;
     pending_cr_ = false;
@@ -47,5 +53,29 @@ std::vector<std::string> Parser::move_fields() noexcept {
 const std::vector<std::string>& Parser::peek_fields() const noexcept {
     return fields_;
 }
+
+
+
+// ============================================================
+// Quoting Parser
+// ============================================================
+
+void QuotingParser::remove_last_saved_char() {
+    if (!fields_.empty() && !fields_.back().empty()) {
+        fields_.back().pop_back();
+    }
+}
+
+bool QuotingParser::is_quote(char c) {
+    return c == config_.quote_char;
+};
+
+bool QuotingParser::is_delim(char c) {
+    return c == config_.delimiter;
+};
+
+bool QuotingParser::is_newline(char c) {
+    return config_.is_line_ending(c);
+};
 
 }

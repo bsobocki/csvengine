@@ -19,17 +19,9 @@ ParseStatus LenientQuotingParser::parse(std::string_view buffer) {
 
     const auto is_begin   = [begin = buffer.begin()](auto it) { return it == begin; };
     const auto is_end     = [end = buffer.end()](auto it) { return it == end; };
-    const auto is_quote   = [this](char c)  { return c == config_.quote_char; };
-    const auto is_delim   = [this](char c)  { return c == config_.delimiter; };
-    const auto is_newline = [this](char c)  { return config_.is_line_ending(c); };
     const auto consume    = [&](size_t consume_size = 1) {
         buff_it += consume_size;
         consumed_ += consume_size;
-    };
-    const auto remove_last_saved_char = [this]() {
-        if (!fields_.empty() && !fields_.back().empty()) {
-            fields_.back().pop_back();
-        }
     };
     const auto add_field = [&](auto end_it) {
         if (!incomplete_last_read_) {
