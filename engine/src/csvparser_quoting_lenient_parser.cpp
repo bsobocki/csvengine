@@ -10,15 +10,17 @@ LenientQuotingParser::LenientQuotingParser(const Config& config): QuotingParser(
 
 ParseStatus LenientQuotingParser::parse(std::string_view buffer) {
     consumed_ = 0;
-    bool add_field_quoted = false;
+    bool quoted_field = false;
 
     if (buffer.empty()) return ParseStatus::need_more_data;
 
-    auto buff_it = buffer.begin();
+    const char* buff_it = buffer.data();
+    const char* buff_end = buff_it + buffer.size();
+
     auto field_start = buff_it;
 
-    const auto is_begin   = [begin = buffer.begin()](auto it) { return it == begin; };
-    const auto is_end     = [end = buffer.end()](auto it) { return it == end; };
+    const auto is_begin   = [&](auto ptr) { return ptr == buffer.data(); };
+    const auto is_end     = [&](auto ptr) { return ptr == buff_end; };
     const auto consume    = [&](size_t consume_size = 1) {
         buff_it += consume_size;
         consumed_ += consume_size;
@@ -35,15 +37,18 @@ ParseStatus LenientQuotingParser::parse(std::string_view buffer) {
         // because in lenient mode the first quote will set in_quotes_ to false
         // but add_field need to know that this field is in quotes
         // even though we don't have quote at the start
-        if (add_field_quoted) {
+        if (quoted_field) {
             quoting = true;
-            add_field_quoted = false;
+            quoted_field = false;
         }
 
         if (is_quote(*field_start)) {
             field_start++;
             quoting = true;
         }
+
+        auto raw_len = std::distance(field_start, end_it);
+        field_ref.reserve(field_ref.size() + raw_len); // even if we will use slightly less space - we will avoid repeated reallocations
 
         auto it = field_start;
         while (it != end_it) {
@@ -110,7 +115,7 @@ ParseStatus LenientQuotingParser::parse(std::string_view buffer) {
 
     // we need to let add_field know that even though the first char is not a quote
     // we are still in quotes
-    add_field_quoted = in_quotes_;
+    quoted_field = in_quotes_;
 
     while (!is_end(buff_it)) {
         if (is_newline(*buff_it) && !in_quotes_) {

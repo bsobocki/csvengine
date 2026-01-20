@@ -13,12 +13,14 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
 
     if (buffer.empty()) return ParseStatus::need_more_data;
 
-    auto buff_it = buffer.begin();
+    const char* buff_it = buffer.data();
+    const char* buff_end = buff_it + buffer.size();
+
     auto field_start = buff_it;
     size_t current_field_quote_literals = 0;    
 
-    const auto is_begin   = [begin = buffer.begin()](auto it) { return it == begin; };
-    const auto is_end     = [end = buffer.end()](auto it) { return it == end; };
+    const auto is_begin   = [&](auto it) { return it == buffer.data(); };
+    const auto is_end     = [&](auto it) { return it == buff_end; };
     const auto consume    = [&](size_t consume_size = 1) {
         buff_it += consume_size;
         consumed_ += consume_size;
