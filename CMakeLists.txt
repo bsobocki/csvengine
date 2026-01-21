@@ -34,9 +34,16 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/google/googletest.git
   GIT_TAG        v1.17.0 # Use a specific, stable version
 )
-
 # Make GTest available to our project. CMake will download and configure it.
 FetchContent_MakeAvailable(googletest)
+
+# Declare the Google Benchmark dependency from its GitHub repository
+FetchContent_Declare(
+  benchmark
+  GIT_REPOSITORY https://github.com/google/benchmark.git
+  GIT_TAG v1.9.5
+)
+FetchContent_MakeAvailable(benchmark)
 
 # Generate compile_commands.json to make VS Code IntelliSense happy
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -45,3 +52,5 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_subdirectory(engine)
 add_subdirectory(demo)
 add_subdirectory(tests)
+add_subdirectory(benchmarks)
+
