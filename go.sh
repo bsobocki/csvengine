@@ -133,6 +133,30 @@ function do_run_tests() {
   fi
 }
 
+function do_run_benchmarks() {
+  local filter="${1}*" # Run all tests for given test group or all if none provided
+  local executable="./build/benchmarks/run_benchmarks"
+  if [ -f $executable ]; then
+    cd build/benchmarks
+
+    echo "┌──────────────────┐"
+    echo "│ Running tests... │"
+    echo "└──────────────────┘"
+
+    ./run_benchmarks
+    STATUS=$?
+
+    cd ../..
+  else
+    echoError "Executable $executable not found. Did you build first?"
+    echo "Run"
+    echo ""
+    echo "   ./go.sh build benchmarks"
+    echo ""
+    echo "to build and run benchmarks."
+  fi
+}
+
 while [[ $# -gt 0 ]]; do
   case $1 in
     -c|--clean|clean)
@@ -165,6 +189,12 @@ while [[ $# -gt 0 ]]; do
     -rt|--run_tests|run_tests)
       shift
       do_run_tests "$@"
+      break
+      ;;
+
+    -rb|--run_benchmarks|run_benchmarks)
+      shift
+      do_run_benchmarks "$@"
       break
       ;;
 
