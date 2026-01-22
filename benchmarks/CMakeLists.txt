@@ -1,6 +1,6 @@
 add_executable(run_benchmarks
-  src/parser_bench.cpp
-  src/reader_bench.cpp
+  src/parser_benchmark.cpp
+  src/reader_benchmark.cpp
 )
 
 target_link_libraries(run_benchmarks
