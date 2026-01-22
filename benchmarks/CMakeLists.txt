@@ -8,3 +8,8 @@ target_link_libraries(run_benchmarks
     benchmark::benchmark_main
     csvengine
 )
+
+target_include_directories(run_benchmarks
+  PRIVATE
+    ${CMAKE_SOURCE_DIR}/tests/test_data
+)
