@@ -5,6 +5,8 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 STATUS=0
+EXIT_SUCCESS_MESSAGE=""
+EXIT_FAIL_MESSAGE=""
 
 function echoSuccess() {
   printf "${GREEN}✓ %s${NC}\n" "$1"
@@ -150,10 +152,10 @@ function do_run_benchmarks() {
       BENCHMARKS_ARGS="--benchmark_out_format=csv --benchmark_out=benchmark_results.csv"
     fi
 
-    echo "RUN: ./run_benchmarks $BENCHMARKS_ARGS"
-
     ./run_benchmarks $BENCHMARKS_ARGS
     STATUS=$?
+
+    EXIT_SUCCESS_MESSAGE="Result file is available in build/benchmarks/benchmark_results.json"
 
     cd ../..
   else
@@ -230,3 +232,4 @@ done
 
 echo ""
 echoSuccess "GO finished successfully"
+printf "$GREEN  $EXIT_SUCCESS_MESSAGE $NC\n"
