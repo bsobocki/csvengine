@@ -134,7 +134,6 @@ function do_run_tests() {
 }
 
 function do_run_benchmarks() {
-  local filter="${1}*" # Run all tests for given test group or all if none provided
   local executable="./build/benchmarks/run_benchmarks"
   if [ -f $executable ]; then
     cd build/benchmarks
@@ -143,7 +142,17 @@ function do_run_benchmarks() {
     echo "│ Running tests... │"
     echo "└──────────────────┘"
 
-    ./run_benchmarks
+    BENCHMARKS_ARGS=""
+
+    if [[ "$1" == "json" ]]; then
+      BENCHMARKS_ARGS="--benchmark_out_format=json --benchmark_out=benchmark_results.json"
+    elif [[ "$1" == "csv" ]]; then
+      BENCHMARKS_ARGS="--benchmark_out_format=csv --benchmark_out=benchmark_results.csv"
+    fi
+
+    echo "RUN: ./run_benchmarks $BENCHMARKS_ARGS"
+
+    ./run_benchmarks $BENCHMARKS_ARGS
     STATUS=$?
 
     cd ../..
@@ -192,7 +201,7 @@ while [[ $# -gt 0 ]]; do
       break
       ;;
 
-    -rb|--run_benchmarks|run_benchmarks)
+    -benchmarks|-rb|--benchmarks|benchmarks|--run_benchmarks|run_benchmarks)
       shift
       do_run_benchmarks "$@"
       break
@@ -219,4 +228,5 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+echo ""
 echoSuccess "GO finished successfully"
