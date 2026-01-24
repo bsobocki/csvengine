@@ -39,3 +39,8 @@
    - No unexpected performance cliffs
    - Predictable behavior
 
+### SimpleParser vs StrictParser:
+
+Small data:  SimpleParser 6.5% faster (723 < 771)
+Medium data: StrictParser 4.6% faster (6,855 < 7,187)
+Large data:  StrictParser 7.2% faster (33,873 < 36,509)
