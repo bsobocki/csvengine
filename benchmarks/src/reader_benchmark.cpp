@@ -15,10 +15,13 @@ using namespace csv;
 static std::string repeat_csv(std::string_view one_file, int repeats) {
     std::string out;
     out.reserve(one_file.size() * repeats);
+    
+    if (one_file.empty()) return "";
+    
     for (int i = 0; i < repeats; ++i) {
         out.append(one_file);
         // ensure last record ends with newline to avoid “EOF flush” differences
-        if (!out.empty() && out.back() != '\n') out.push_back('\n');
+        if (one_file.back() != '\n') out.push_back('\n');
     }
     return out;
 }
@@ -131,3 +134,64 @@ static void BM_Reader_QuotedData_EndToEnd(benchmark::State& state) {
     }
 }
 BENCHMARK(BM_Reader_QuotedData_EndToEnd)->Arg(1)->Arg(50);
+
+
+static void BM_SimpleData_ParserComparison_TestBody(benchmark::State& state, Config& cfg) {
+    const int repeats = static_cast<int>(state.range(0));
+
+    const std::string csv_text = repeat_csv(simple_csv_data, repeats);
+
+    // if i don't specify 'Iterations' in BENCHMARK(...)->Arg(x)->Iterations(y)
+    // google benchmark will decide how many iterations it will be
+    for (auto _ : state) {
+        auto stream = std::make_unique<std::istringstream>(csv_text);
+        Reader reader(std::move(stream), cfg);
+
+        int64_t rows = 0;
+        while (reader.next()) {
+            rows++;
+            benchmark::DoNotOptimize(reader.current_record());
+        }
+
+        benchmark::DoNotOptimize(rows);
+        state.SetItemsProcessed(rows);
+        state.SetBytesProcessed(csv_text.size());
+    }
+}
+static void BM_SimpleData_ParserComparison_SimpleParser(benchmark::State& state) {
+    Config cfg{
+        .has_header = true,
+        .has_quoting = false,
+        .line_ending = Config::LineEnding::lf,
+    };
+    BM_SimpleData_ParserComparison_TestBody(state, cfg);
+}
+static void BM_SimpleData_ParserComparison_StrictParser(benchmark::State& state) {
+    Config cfg{
+        .has_header = true,
+        .has_quoting = true,
+        .parse_mode = Config::ParseMode::strict,
+        .line_ending = Config::LineEnding::lf,
+    };
+    BM_SimpleData_ParserComparison_TestBody(state, cfg);
+}
+static void BM_SimpleData_ParserComparison_LenientParser(benchmark::State& state) {
+    Config cfg{
+        .has_header = true,
+        .has_quoting = true,
+        .parse_mode = Config::ParseMode::lenient,
+        .line_ending = Config::LineEnding::lf,
+    };
+    BM_SimpleData_ParserComparison_TestBody(state, cfg);
+}
+BENCHMARK(BM_SimpleData_ParserComparison_SimpleParser)->Arg(100)->Iterations(100);
+BENCHMARK(BM_SimpleData_ParserComparison_StrictParser)->Arg(100)->Iterations(100);
+BENCHMARK(BM_SimpleData_ParserComparison_LenientParser)->Arg(100)->Iterations(100);
+
+BENCHMARK(BM_SimpleData_ParserComparison_SimpleParser)->Arg(1000)->Iterations(100);
+BENCHMARK(BM_SimpleData_ParserComparison_StrictParser)->Arg(1000)->Iterations(100);
+BENCHMARK(BM_SimpleData_ParserComparison_LenientParser)->Arg(1000)->Iterations(100);
+
+BENCHMARK(BM_SimpleData_ParserComparison_SimpleParser)->Arg(5000)->Iterations(100);
+BENCHMARK(BM_SimpleData_ParserComparison_StrictParser)->Arg(5000)->Iterations(100);
+BENCHMARK(BM_SimpleData_ParserComparison_LenientParser)->Arg(5000)->Iterations(100);
