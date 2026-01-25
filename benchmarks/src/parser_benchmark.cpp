@@ -9,7 +9,7 @@
 
 namespace csv {
 
-static void BM_CsvData_ParserComparison_TestBody(benchmark::State& state, Config& cfg, const std::string& data) {
+static void BM_ParserComparison_TestBody(benchmark::State& state, Config& cfg, const std::string& data) {
     const int repeats = static_cast<int>(state.range(0));
 
     const std::string csv_text = repeat_csv(data, repeats);
@@ -41,7 +41,7 @@ static void BM_SimpleData_ParserComparison_SimpleParser(benchmark::State& state)
         .has_quoting = false,
         .line_ending = Config::LineEnding::lf,
     };
-    BM_CsvData_ParserComparison_TestBody(state, cfg, simple_csv_data);
+    BM_ParserComparison_TestBody(state, cfg, simple_csv_data);
 }
 static void BM_SimpleData_ParserComparison_StrictParser(benchmark::State& state) {
     Config cfg{
@@ -50,7 +50,7 @@ static void BM_SimpleData_ParserComparison_StrictParser(benchmark::State& state)
         .parse_mode = Config::ParseMode::strict,
         .line_ending = Config::LineEnding::lf,
     };
-    BM_CsvData_ParserComparison_TestBody(state, cfg, simple_csv_data);
+    BM_ParserComparison_TestBody(state, cfg, simple_csv_data);
 }
 static void BM_SimpleData_ParserComparison_LenientParser(benchmark::State& state) {
     Config cfg{
@@ -59,7 +59,7 @@ static void BM_SimpleData_ParserComparison_LenientParser(benchmark::State& state
         .parse_mode = Config::ParseMode::lenient,
         .line_ending = Config::LineEnding::lf,
     };
-    BM_CsvData_ParserComparison_TestBody(state, cfg, simple_csv_data);
+    BM_ParserComparison_TestBody(state, cfg, simple_csv_data);
 }
 BENCHMARK(BM_SimpleData_ParserComparison_SimpleParser)->Arg(100)->Iterations(100);
 BENCHMARK(BM_SimpleData_ParserComparison_StrictParser)->Arg(100)->Iterations(100);
@@ -83,7 +83,7 @@ static void BM_QuotedData_ParserComparison_StrictParser(benchmark::State& state)
         .parse_mode = Config::ParseMode::strict,
         .line_ending = Config::LineEnding::lf,
     };
-    BM_CsvData_ParserComparison_TestBody(state, cfg, quoted_csv_data);
+    BM_ParserComparison_TestBody(state, cfg, quoted_csv_data);
 }
 static void BM_QuotedData_ParserComparison_LenientParser(benchmark::State& state) {
     Config cfg{
@@ -92,7 +92,7 @@ static void BM_QuotedData_ParserComparison_LenientParser(benchmark::State& state
         .parse_mode = Config::ParseMode::lenient,
         .line_ending = Config::LineEnding::lf,
     };
-    BM_CsvData_ParserComparison_TestBody(state, cfg, quoted_csv_data);
+    BM_ParserComparison_TestBody(state, cfg, quoted_csv_data);
 }
 BENCHMARK(BM_QuotedData_ParserComparison_StrictParser)->Arg(100)->Iterations(100);
 BENCHMARK(BM_QuotedData_ParserComparison_LenientParser)->Arg(100)->Iterations(100);
