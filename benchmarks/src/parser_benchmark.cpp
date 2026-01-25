@@ -9,10 +9,10 @@
 
 namespace csv {
 
-static void BM_SimpleData_ParserComparison_TestBody(benchmark::State& state, Config& cfg) {
+static void BM_SimpleData_ParserComparison_TestBody(benchmark::State& state, Config& cfg, const std::string& data = simple_csv_data) {
     const int repeats = static_cast<int>(state.range(0));
 
-    const std::string csv_text = repeat_csv(simple_csv_data, repeats);
+    const std::string csv_text = repeat_csv(data, repeats);
 
     // if i don't specify 'Iterations' in BENCHMARK(...)->Arg(x)->Iterations(y)
     // google benchmark will decide how many iterations it will do
@@ -23,7 +23,8 @@ static void BM_SimpleData_ParserComparison_TestBody(benchmark::State& state, Con
         int64_t rows = 0;
         while (reader.next()) {
             rows++;
-            benchmark::DoNotOptimize(reader.current_record());
+            auto record = reader.current_record();
+            benchmark::DoNotOptimize(record);
         }
 
         benchmark::DoNotOptimize(rows);

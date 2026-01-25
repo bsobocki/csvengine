@@ -50,7 +50,7 @@ static void BM_Reader_Stream_EndToEnd(benchmark::State& state) {
     }
 }
 BENCHMARK(BM_Reader_Stream_EndToEnd)
-    ->Arg(1)->Arg(10)->Arg(100); // repeats
+    ->Arg(1)->Arg(10)->Arg(100);
 
 // Benchmark: quoted-heavy dataset (uses your quoted_csv_data)
 static void BM_Reader_QuotedData_EndToEnd(benchmark::State& state) {
