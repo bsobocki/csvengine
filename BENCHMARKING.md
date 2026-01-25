@@ -1,8 +1,8 @@
 # Benchmark Results
 
-## Parser Performance Comparison
+# Parser Performance Comparison
 
-### Throughput (rows per second)
+## Throughput (rows per second)
 
 | Parser | Small Data | Medium Data | Large Data | Average |
 |--------|-----------|-------------|-----------|---------|
@@ -10,7 +10,7 @@
 | SimpleParser | 8,591 k/s | 8,657 k/s | 8,522 k/s | **8,590 k/s** |
 | LenientParser | 7,131 k/s | 7,281 k/s | 7,187 k/s | **7,200 k/s** |
 
-### Absolute Time (nanoseconds per iteration)
+## Absolute Time (nanoseconds per iteration)
 
 | Data Size | StrictParser | SimpleParser | LenientParser |
 |-----------|-------------|-------------|--------------|
@@ -45,7 +45,7 @@ Small data:  SimpleParser 6.5% faster (723 < 771)
 Medium data: StrictParser 4.6% faster (6,855 < 7,187)
 Large data:  StrictParser 7.2% faster (33,873 < 36,509)
 
-### Quoted Data Results
+## Quoted Data Results
 
 For quoted data we have benchmarks results for `StrictQuotingParser` and `LenintQuotingParser`:
 
@@ -67,3 +67,25 @@ BM_QuotedData_ParserComparison_LenientParser/5000/iterations:100   39482449 ns  
 | 5000 rows	|  33.45% faster   |
 
 ***Key Insight***: The performance advantage increases with larger datasets, suggesting better scalability for the strict parser implementation.
+
+
+### Second Try
+
+```
+BM_QuotedData_ParserComparison_StrictParser/100/iterations:100       566867 ns       542261 ns          100 bytes_per_second=318.761Ki/s items_per_second=5.51395k/s
+BM_QuotedData_ParserComparison_LenientParser/100/iterations:100      788755 ns       754516 ns          100 bytes_per_second=229.089Ki/s items_per_second=3.96281k/s
+BM_QuotedData_ParserComparison_StrictParser/1000/iterations:100     5402972 ns      5170468 ns          100 bytes_per_second=334.305Ki/s items_per_second=5.80025k/s
+BM_QuotedData_ParserComparison_LenientParser/1000/iterations:100    7672361 ns      7342650 ns          100 bytes_per_second=235.408Ki/s items_per_second=4.08436k/s
+BM_QuotedData_ParserComparison_StrictParser/5000/iterations:100    27090091 ns     25925779 ns          100 bytes_per_second=333.358Ki/s items_per_second=5.78536k/s
+BM_QuotedData_ParserComparison_LenientParser/5000/iterations:100   38618041 ns     36958275 ns          100 bytes_per_second=233.847Ki/s items_per_second=4.05836k/s
+```
+
+#### Summary:
+
+| Data Size	| Performance Gain |
+|-----------|------------------|
+| 100 rows	|  28.13% faster   |
+| 1000 rows	|  29.58% faster   |
+| 5000 rows	|  29.85% faster   |
+
+***Key Finding***: The `StrictQuotingParser` maintains a consistent `~29%` performance advantage across all dataset sizes, indicating stable and predictable performance characteristics.
