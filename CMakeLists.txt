@@ -17,27 +17,27 @@ endif()
 # Standard C++20
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF) # we stick to standard C++
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_compile_options(-Wall -Wextra -Wpedantic)
 
-# Enable CTest, the testing utility from CMake
+# Enable CTest
 enable_testing()
 
-# Fetch Google Test
-# Include the FetchContent module to download dependencies
 include(FetchContent)
 
-# Declare the GTest dependency from its GitHub repository
+# Fetch Google Test
 FetchContent_Declare(
   googletest
   GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG        v1.17.0 # Use a specific, stable version
+  GIT_TAG        v1.17.0
 )
-# Make GTest available to our project. CMake will download and configure it.
 FetchContent_MakeAvailable(googletest)
 
-# Declare the Google Benchmark dependency from its GitHub repository
+# Fetch Google Benchmark - DISABLE ITS TESTS FIRST
+set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Disable benchmark tests" FORCE)
+set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable benchmark gtest tests" FORCE)
+
 FetchContent_Declare(
   benchmark
   GIT_REPOSITORY https://github.com/google/benchmark.git
@@ -45,7 +45,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(benchmark)
 
-# Generate compile_commands.json to make VS Code IntelliSense happy
+# Generate compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Include Subdirectories
@@ -53,4 +53,3 @@ add_subdirectory(engine)
 add_subdirectory(demo)
 add_subdirectory(tests)
 add_subdirectory(benchmarks)
-
