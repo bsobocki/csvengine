@@ -2,7 +2,24 @@
 
 # Parser Performance Comparison
 
-## Throughput (rows per second)
+## Overview
+
+Performance benchmarks for CSV parser implementations across different data sizes and parsing modes.
+
+# Simple Data - No Quoting
+
+### Test Configuration
+
+| Property | Value |
+|----------|-------|
+| **Test Data** | `simple_csv_data` (unquoted, 3 fields/record) |
+| **Data Sizes** | 100, 1000, 5000 * data (6 records in `simple_csv_data`) |
+| **Iterations** | 100 per test |
+| **Framework** | Google Benchmark |
+| **CPU** | 13th Gen Intel(R) Core(TM) i7-13700H |
+| **Reproduction** | Run `./go.sh build benchmarks` |
+
+### Throughput (rows per second)
 
 | Parser | Small Data | Medium Data | Large Data | Average |
 |--------|-----------|-------------|-----------|---------|
@@ -10,7 +27,7 @@
 | SimpleParser | 8,591 k/s | 8,657 k/s | 8,522 k/s | **8,590 k/s** |
 | LenientParser | 7,131 k/s | 7,281 k/s | 7,187 k/s | **7,200 k/s** |
 
-## Absolute Time (nanoseconds per iteration)
+### Absolute Time (nanoseconds per iteration)
 
 | Data Size | StrictParser | SimpleParser | LenientParser |
 |-----------|-------------|-------------|--------------|
@@ -46,6 +63,17 @@ Medium data: StrictParser 4.6% faster (6,855 < 7,187)
 Large data:  StrictParser 7.2% faster (33,873 < 36,509)
 
 ## Quoted Data Results
+
+## Test Configuration
+
+| Property | Value |
+|----------|-------|
+| **Test Data** | `quoted_csv_data` (quoted, 3 fields/record) |
+| **Data Sizes** | 100, 1000, 5000 * data (3 records in `quoted_csv_data`) |
+| **Iterations** | 100 per test |
+| **Framework** | Google Benchmark |
+| **CPU** | 13th Gen Intel(R) Core(TM) i7-13700H |
+| **Reproduction** | Run `./go.sh build benchmarks` |
 
 For quoted data we have benchmarks results for `StrictQuotingParser` and `LenintQuotingParser`:
 
