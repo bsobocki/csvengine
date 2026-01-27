@@ -11,6 +11,10 @@
 
 namespace csv {
 
+constexpr int64_t small_data  = 100;
+constexpr int64_t medium_data = 1000;
+constexpr int64_t big_data    = 10000;
+
 // Benchmark: iterate through entire CSV using Reader(stream)
 // Measures end-to-end: buffering + parsing + record construction
 static void BM_Reader_Stream_EndToEnd(benchmark::State& state) {
@@ -47,7 +51,7 @@ static void BM_Reader_Stream_EndToEnd(benchmark::State& state) {
     state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * csv_text.size());
 }
 BENCHMARK(BM_Reader_Stream_EndToEnd)
-    ->Arg(100)->Arg(1000)->Arg(5000);
+    ->Arg(small_data)->Arg(medium_data)->Arg(big_data);
 
 // Benchmark: quoted-heavy dataset (uses your quoted_csv_data)
 static void BM_Reader_QuotedData_EndToEnd(benchmark::State& state) {
@@ -78,6 +82,6 @@ static void BM_Reader_QuotedData_EndToEnd(benchmark::State& state) {
     state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * csv_text.size());
 }
 BENCHMARK(BM_Reader_QuotedData_EndToEnd)
-    ->Arg(100)->Arg(1000)->Arg(5000);
+    ->Arg(small_data)->Arg(medium_data)->Arg(big_data);
 
 }
