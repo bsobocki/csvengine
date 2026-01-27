@@ -14,7 +14,9 @@ namespace csv {
 
 enum class ReadingResult { ok, eof, buffer_full, fail };
 
-constexpr size_t DEFAULT_CAPACITY = 65536; // 64 KB chunk
+// default buffer capacity changed from 65636 to 2048
+// because performance tests shows that reader perfroms better with this size
+constexpr size_t DEFAULT_CAPACITY = 2048; // 2 KB chunk
 
 class IBuffer {
 public:
