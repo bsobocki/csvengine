@@ -148,14 +148,14 @@ function do_benchmarks() {
 
     if [[ "$1" == "json" ]]; then
       BENCHMARKS_ARGS="--benchmark_out_format=json --benchmark_out=benchmark_results.json"
+      EXIT_SUCCESS_MESSAGE="Result file is available in build/benchmarks/benchmark_results.json"
     elif [[ "$1" == "csv" ]]; then
       BENCHMARKS_ARGS="--benchmark_out_format=csv --benchmark_out=benchmark_results.csv"
+      EXIT_SUCCESS_MESSAGE="Result file is available in build/benchmarks/benchmark_results.csv"
     fi
 
     ./run_benchmarks $BENCHMARKS_ARGS
     STATUS=$?
-
-    EXIT_SUCCESS_MESSAGE="Result file is available in build/benchmarks/benchmark_results.json"
 
     cd ../..
   else
@@ -183,8 +183,10 @@ function do_run_benchmarks() {
 
       if [[ "$1" == "json" ]]; then
         BENCHMARKS_ARGS="$BENCHMARK_ARGS --benchmark_out_format=json --benchmark_out=benchmark_results.json"
+        EXIT_SUCCESS_MESSAGE="Result file is available in build/benchmarks/benchmark_results.json"
       elif [[ "$1" == "csv" ]]; then
         BENCHMARKS_ARGS="$BENCHMARK_ARGS --benchmark_out_format=csv --benchmark_out=benchmark_results.csv"
+        EXIT_SUCCESS_MESSAGE="Result file is available in build/benchmarks/benchmark_results.csv"
       else
         BENCHMARKS_ARGS="$BENCHMARK_ARGS --benchmark_filter=$1"
       fi
@@ -196,16 +198,14 @@ function do_run_benchmarks() {
     ./run_benchmarks $BENCHMARKS_ARGS
     STATUS=$?
 
-    EXIT_SUCCESS_MESSAGE="Result file is available in build/benchmarks/benchmark_results.json"
-
     cd ../..
   else
     echoError "Executable $executable not found. Did you build first?"
     echo "Run"
     echo ""
-    echo "   ./go.sh build benchmarks"
+    echo "   ./go.sh build run_benchmarks [benchmarks_regex] [format]"
     echo ""
-    echo "to build and run benchmarks."
+    echo "to build and run specific benchmarks."
   fi
 }
 
