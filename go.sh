@@ -135,7 +135,7 @@ function do_run_tests() {
   fi
 }
 
-function do_run_benchmarks() {
+function do_benchmarks() {
   local executable="./build/benchmarks/run_benchmarks"
   if [ -f $executable ]; then
     cd build/benchmarks
@@ -151,6 +151,47 @@ function do_run_benchmarks() {
     elif [[ "$1" == "csv" ]]; then
       BENCHMARKS_ARGS="--benchmark_out_format=csv --benchmark_out=benchmark_results.csv"
     fi
+
+    ./run_benchmarks $BENCHMARKS_ARGS
+    STATUS=$?
+
+    EXIT_SUCCESS_MESSAGE="Result file is available in build/benchmarks/benchmark_results.json"
+
+    cd ../..
+  else
+    echoError "Executable $executable not found. Did you build first?"
+    echo "Run"
+    echo ""
+    echo "   ./go.sh build benchmarks"
+    echo ""
+    echo "to build and run benchmarks."
+  fi
+}
+
+function do_run_benchmarks() {
+  local executable="./build/benchmarks/run_benchmarks"
+  if [ -f $executable ]; then
+    cd build/benchmarks
+
+    echo "┌───────────────────────────────────┐"
+    echo "│ Running performance benchmarks... │"
+    echo "└───────────────────────────────────┘"
+
+    BENCHMARKS_ARGS=""
+
+    while [[ $# -gt 0 ]]; do
+
+      if [[ "$1" == "json" ]]; then
+        BENCHMARKS_ARGS="$BENCHMARK_ARGS --benchmark_out_format=json --benchmark_out=benchmark_results.json"
+      elif [[ "$1" == "csv" ]]; then
+        BENCHMARKS_ARGS="$BENCHMARK_ARGS --benchmark_out_format=csv --benchmark_out=benchmark_results.csv"
+      else
+        BENCHMARKS_ARGS="$BENCHMARK_ARGS --benchmark_filter=$1"
+      fi
+
+      shift
+
+    done
 
     ./run_benchmarks $BENCHMARKS_ARGS
     STATUS=$?
@@ -203,10 +244,16 @@ while [[ $# -gt 0 ]]; do
       break
       ;;
 
-    -benchmarks|-rb|--benchmarks|benchmarks|--run_benchmarks|run_benchmarks)
+    -b|--benchmarks|benchmarks)
+      shift
+      do_benchmarks "$@"
+      break
+      ;;
+
+    -rb|--run_benchmarks|run_benchmarks)
       shift
       do_run_benchmarks "$@"
-      break
+      break;
       ;;
 
     -a|--all|all)
