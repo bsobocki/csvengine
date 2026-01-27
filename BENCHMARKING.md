@@ -2,7 +2,8 @@
 
 ## Overview
 
-Performance benchmarks for `csvengine` parser implementations across different data sizes, parsing modes, and buffer configurations.
+Performance benchmarks for `csvengine` parser implementations across different data sizes, parsing modes, and buffer configurations.\
+Current Default Buffer Size is 65536 -> 64 KB chunk.
 
 ---
 
