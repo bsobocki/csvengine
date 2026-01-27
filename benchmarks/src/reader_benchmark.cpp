@@ -26,31 +26,28 @@ static void BM_Reader_Stream_EndToEnd(benchmark::State& state) {
     cfg.has_quoting = true;
     cfg.line_ending = Config::LineEnding::lf;
 
+    std::size_t total_rows = 0;
+
     for (auto _ : state) {
         // Setup inside each iteration so every run parses from scratch
         auto stream = std::make_unique<std::istringstream>(csv_text);
         Reader reader(std::move(stream), cfg);
 
-        std::size_t rows = 0;
-        std::size_t bytes = 0;
-
         while (reader.next()) {
             const auto& rec = reader.current_record();
-            rows++;
-            for (const auto& f : rec.fields()) bytes += f.size();
+            total_rows++;
             benchmark::DoNotOptimize(rec);
         }
 
-        benchmark::DoNotOptimize(rows);
-        benchmark::DoNotOptimize(bytes);
-
-        // Report throughput
-        state.SetItemsProcessed(static_cast<int64_t>(rows));
-        state.SetBytesProcessed(static_cast<int64_t>(csv_text.size()));
+        benchmark::DoNotOptimize(total_rows);
     }
+
+    // Report throughput
+    state.SetItemsProcessed(static_cast<int64_t>(total_rows));
+    state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * csv_text.size());
 }
 BENCHMARK(BM_Reader_Stream_EndToEnd)
-    ->Arg(1)->Arg(10)->Arg(100);
+    ->Arg(100)->Arg(1000)->Arg(5000);
 
 // Benchmark: quoted-heavy dataset (uses your quoted_csv_data)
 static void BM_Reader_QuotedData_EndToEnd(benchmark::State& state) {
@@ -63,21 +60,24 @@ static void BM_Reader_QuotedData_EndToEnd(benchmark::State& state) {
     cfg.has_quoting = true;
     cfg.line_ending = Config::LineEnding::lf;
 
+    std::size_t total_rows = 0;
+
     for (auto _ : state) {
         auto stream = std::make_unique<std::istringstream>(csv_text);
         Reader reader(std::move(stream), cfg);
 
-        std::size_t rows = 0;
         while (reader.next()) {
-            rows++;
+            total_rows++;
             benchmark::DoNotOptimize(reader.current_record());
         }
 
-        benchmark::DoNotOptimize(rows);
-        state.SetItemsProcessed(static_cast<int64_t>(rows));
-        state.SetBytesProcessed(static_cast<int64_t>(csv_text.size()));
+        benchmark::DoNotOptimize(total_rows);
     }
+
+    state.SetItemsProcessed(static_cast<int64_t>(total_rows));
+    state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * csv_text.size());
 }
-BENCHMARK(BM_Reader_QuotedData_EndToEnd)->Arg(1)->Arg(50);
+BENCHMARK(BM_Reader_QuotedData_EndToEnd)
+    ->Arg(100)->Arg(1000)->Arg(5000);
 
 }

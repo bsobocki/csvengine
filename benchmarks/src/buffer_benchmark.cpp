@@ -22,6 +22,8 @@ static void BM_Reader_BufferSized_EndToEnd(benchmark::State& state) {
     cfg.has_quoting = true;
     cfg.line_ending = Config::LineEnding::lf;
 
+    std::size_t total_rows = 0;
+
     for (auto _ : state) {
         auto stream = std::make_unique<std::istringstream>(csv_text);
 
@@ -29,16 +31,15 @@ static void BM_Reader_BufferSized_EndToEnd(benchmark::State& state) {
         auto buffer = std::make_unique<Buffer<N>>(std::move(stream));
         Reader reader(std::move(buffer), cfg);
 
-        std::size_t rows = 0;
         while (reader.next()) {
-            rows++;
+            total_rows++;
             benchmark::DoNotOptimize(reader.current_record());
         }
 
-        benchmark::DoNotOptimize(rows);
-        state.SetItemsProcessed(static_cast<int64_t>(rows));
-        state.SetBytesProcessed(static_cast<int64_t>(csv_text.size()));
+        benchmark::DoNotOptimize(total_rows);
     }
+    state.SetItemsProcessed(static_cast<int64_t>(total_rows));
+    state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * csv_text.size());
 }
 
 // Register a few sizes (tiny -> default-ish)
