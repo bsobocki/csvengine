@@ -140,9 +140,9 @@ function do_run_benchmarks() {
   if [ -f $executable ]; then
     cd build/benchmarks
 
-    echo "┌──────────────────┐"
-    echo "│ Running tests... │"
-    echo "└──────────────────┘"
+    echo "┌───────────────────────────────────┐"
+    echo "│ Running performance benchmarks... │"
+    echo "└───────────────────────────────────┘"
 
     BENCHMARKS_ARGS=""
 
