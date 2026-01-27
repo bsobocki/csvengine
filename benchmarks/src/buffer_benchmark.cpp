@@ -9,7 +9,7 @@
 
 namespace csv {
 
-constexpr int64_t iterations  = 100;
+constexpr int64_t iterations  = 50;
 constexpr int64_t small_data  = 100;
 constexpr int64_t medium_data = 1000;
 constexpr int64_t big_data    = 10000;
@@ -50,24 +50,28 @@ static void BM_Reader_BufferSized_EndToEnd(benchmark::State& state) {
 // Register a few sizes (tiny -> default-ish)
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<64>)->Arg(small_data)->Arg(medium_data)->Arg(big_data);
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<256>)->Arg(small_data)->Arg(medium_data)->Arg(big_data);
+BENCHMARK(BM_Reader_BufferSized_EndToEnd<1024>)->Arg(small_data)->Arg(medium_data)->Arg(big_data);
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<2048>)->Arg(small_data)->Arg(medium_data)->Arg(big_data);
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<4096>)->Arg(small_data)->Arg(medium_data)->Arg(big_data);
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<65536>)->Arg(small_data)->Arg(medium_data)->Arg(big_data);
 
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<64>)->Arg(small_data)->Iterations(iterations);
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<256>)->Arg(small_data)->Iterations(iterations);
+BENCHMARK(BM_Reader_BufferSized_EndToEnd<1024>)->Arg(small_data)->Iterations(iterations);
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<2048>)->Arg(small_data)->Iterations(iterations);
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<4096>)->Arg(small_data)->Iterations(iterations);
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<65536>)->Arg(small_data)->Iterations(iterations);
 
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<64>)->Arg(medium_data)->Iterations(iterations);
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<256>)->Arg(medium_data)->Iterations(iterations);
+BENCHMARK(BM_Reader_BufferSized_EndToEnd<1024>)->Arg(medium_data)->Iterations(iterations);
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<2048>)->Arg(medium_data)->Iterations(iterations);
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<4096>)->Arg(medium_data)->Iterations(iterations);
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<65536>)->Arg(medium_data)->Iterations(iterations);
 
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<64>)->Arg(big_data)->Iterations(iterations);
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<256>)->Arg(big_data)->Iterations(iterations);
+BENCHMARK(BM_Reader_BufferSized_EndToEnd<1024>)->Arg(big_data)->Iterations(iterations);
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<2048>)->Arg(big_data)->Iterations(iterations);
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<4096>)->Arg(big_data)->Iterations(iterations);
 BENCHMARK(BM_Reader_BufferSized_EndToEnd<65536>)->Arg(big_data)->Iterations(iterations);

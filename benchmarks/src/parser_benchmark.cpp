@@ -9,7 +9,7 @@
 
 namespace csv {
 
-constexpr int64_t iterations  = 100;
+constexpr int64_t iterations  = 50;
 constexpr int64_t small_data  = 100;
 constexpr int64_t medium_data = 1000;
 constexpr int64_t big_data    = 10000;
@@ -36,7 +36,6 @@ static void BM_ParserComparison_TestBody(benchmark::State& state, Config& cfg, c
     state.SetItemsProcessed(total_rows);
     state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * csv_text.size());
 }
-
 
 
 // === Simple Data ===
@@ -79,8 +78,8 @@ BENCHMARK(BM_SimpleData_ParserComparison_SimpleParser)->Arg(big_data)->Iteration
 BENCHMARK(BM_SimpleData_ParserComparison_StrictParser)->Arg(big_data)->Iterations(iterations);
 BENCHMARK(BM_SimpleData_ParserComparison_LenientParser)->Arg(big_data)->Iterations(iterations);
 
-// === Quoted Data ===
 
+// === Quoted Data ===
 
 static void BM_QuotedData_ParserComparison_StrictParser(benchmark::State& state) {
     Config cfg{

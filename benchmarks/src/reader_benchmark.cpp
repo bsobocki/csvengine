@@ -11,7 +11,7 @@
 
 namespace csv {
 
-constexpr int64_t small_data  = 100;
+constexpr int64_t small_data  = 50;
 constexpr int64_t medium_data = 1000;
 constexpr int64_t big_data    = 10000;
 
