@@ -11,11 +11,10 @@ namespace csv {
 
 static void BM_ParserComparison_TestBody(benchmark::State& state, Config& cfg, const std::string& data) {
     const int repeats = static_cast<int>(state.range(0));
-
     const std::string csv_text = repeat_csv(data, repeats);
 
-    // if i don't specify 'Iterations' in BENCHMARK(...)->Arg(x)->Iterations(y)
-    // google benchmark will decide how many iterations it will do
+    int64_t total_rows = 0;
+
     for (auto _ : state) {
         auto stream = std::make_unique<std::istringstream>(csv_text);
         Reader reader(std::move(stream), cfg);
@@ -23,15 +22,17 @@ static void BM_ParserComparison_TestBody(benchmark::State& state, Config& cfg, c
         int64_t rows = 0;
         while (reader.next()) {
             rows++;
-            auto record = reader.current_record();
-            benchmark::DoNotOptimize(record);
+            benchmark::DoNotOptimize(reader.current_record());
         }
-
         benchmark::DoNotOptimize(rows);
-        state.SetItemsProcessed(rows);
-        state.SetBytesProcessed(csv_text.size());
+        total_rows += rows;
     }
+
+    state.SetItemsProcessed(total_rows);
+    state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * csv_text.size());
 }
+
+
 
 // === Simple Data ===
 
