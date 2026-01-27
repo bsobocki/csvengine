@@ -26,6 +26,7 @@
 - [Usage Examples](#usage-examples)
 - [Building from Source](#building-from-source)
 - [Testing](#testing)
+- [Benchmarks](#benchmarks)
 - [Project Structure](#project-structure)
 - [Roadmap](#roadmap)
 - [License](#license)
@@ -112,7 +113,12 @@ cd csvengine
 ./go.sh tests
 ```
 
-### 4. Run Demo
+### 4. Run Benchmarks
+```bash
+./go.sh benchmarks
+```
+
+### 5. Run Demo
 ```bash
 ./go.sh demo
 ```
@@ -305,7 +311,19 @@ cd build && ctest --output-on-failure --verbose
 ./build/tests/run_tests --gtest_filter="StrictParserTest.*"
 ```
 
+## Benchmarks
 
+The project currently contains several different benchmark tests.\
+You can run them using:
+```bash
+./go.sh benchmarks
+```
+If you want to have detailed result summary in JSON or CSV formats you can just add format name as the next argument.
+```bash
+./go.sh benchmarks csv
+
+./go.sh benchmarks json
+```
 
 ## Project Structure
 
