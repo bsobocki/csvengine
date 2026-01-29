@@ -147,7 +147,4 @@ private:
     std::vector<std::string> headers_;
 };
 
-// TODO: separate class for Record with only std::string_view
-using RecordView = Record;
-
 }

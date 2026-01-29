@@ -15,17 +15,6 @@
 
 namespace csv {
 
-template<typename Func>
-concept RecordViewBoolCallback = 
-    std::invocable<Func, const RecordView&> &&
-    std::convertible_to<std::invoke_result_t<Func, const RecordView&>, bool> &&
-    (!std::same_as<std::invoke_result_t<Func, const RecordView&>, void>);
-
-template<typename Func>
-concept RecordViewVoidCallback = 
-    std::invocable<Func, const RecordView&> &&
-    std::same_as<std::invoke_result_t<Func, const RecordView&>, void>;
-
 class Reader {
 public:
     // Construction & Configuration
@@ -51,12 +40,6 @@ public:
     const std::vector<std::string>& headers() const noexcept;
     
     [[nodiscard]] bool next();
-
-    template<RecordViewBoolCallback Func>
-    void for_each(Func&& iteration);
-
-    template<RecordViewVoidCallback Func>
-    void for_each(Func&& iteration);
 
     class Iterator {
         public:
