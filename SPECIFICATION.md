@@ -6,8 +6,6 @@
 
 **Author:** Bartosz Sobocki
 
-**Status:**  NEED TO FIX
-
 ---
 
 # 1. Project Overview
@@ -1208,11 +1206,6 @@ while (buffer.next_char(c)) {
 ### I/O Efficiency
 - **System calls:** ~15 per 1MB file (64KB chunks) vs ~100,000 with `getline()`
 - **Reduction:** ~6600× fewer syscalls
-
-### CPU Efficiency
-- **Zero-copy:** 95%+ of rows use `string_view` (no allocation)
-- **Compaction cost:** Amortized O(1) per row
-- **Cache locality:** Large contiguous reads maximize CPU cache hits
 
 ## 5.4.6 Edge Case: Giant Fields (> Buffer Size)
 
