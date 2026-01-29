@@ -6,8 +6,6 @@ namespace csv {
 
 StrictQuotingParser::StrictQuotingParser(const Config& config): QuotingParser(config) {}
 
-// TODO: CODE REFACTOR (split into functions + extract common logic and code into QuotingParser class)
-
 ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
     consumed_ = 0;
 

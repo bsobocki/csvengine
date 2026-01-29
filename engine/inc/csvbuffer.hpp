@@ -14,9 +14,8 @@ namespace csv {
 
 enum class ReadingResult { ok, eof, buffer_full, fail };
 
-// default buffer capacity changed from 65636 to 2048
-// because performance tests shows that reader perfroms better with this size
-constexpr size_t DEFAULT_CAPACITY = 2048; // 2 KB chunk
+// 2KB chosen to optimize for L1 Cache locality (See BENCHMARKING.md)
+constexpr size_t DEFAULT_CAPACITY = 2048;
 
 class IBuffer {
 public:
@@ -117,7 +116,7 @@ class Buffer : public IBuffer {
         void compact() noexcept {
             size_t leftover = available();
 
-            // move leftover data to the beggining
+            // move leftover data to the beginning
             if (leftover && start_) {
                 std::memmove(data_.get(), data_.get() + start_, leftover);
             }

@@ -1014,20 +1014,6 @@ public:
 
 ## 5.4: High-Performance Circular Buffer Management
 
-My draft thoughts - TODO: correct text below to explain everything according to:
-> (for buffer ideas) \
-> i wanted to use `size_` and `start_` for `remaining_data_size()` an curcular buffer operation.. after reading i will move `start_` at the end of read data. then `remain_data_size()` will be just `size_ - start_` \
-> ... wondering about using `memmove`\
-> isn't that O(N)?
-isn't better to just have `start_` and use buffer char by char and if parser decide that this is not an end of record then just calls `read_data` and whole buffer is overwritten? in that case `size_` cannot be const, because it will be overwritten each time we read new data. this buffer is just for reading, it reads, gives next chars from `unique_ptr<char[]> data_` and returns `remain_data_size` when called and result (i will add `eob` - on of buffer for clarity) \
-> i can do one more thing... but it complicated things... parser can use std::string_view for buffer data (just pointer to the data and size) and when i call `buffer.read_data(size)` it will overwrite only `size` first bytes, so i won't overwrite data i am keeping in my string_view in parser (it could help with copying string issue)... but if one row would be bigger than `data_` then we would need to copy it anyway and overwrite memory (but this case is not that common i guess) \
-> ... \
-> read will overwrite only first bytes that has been used already `[0.. curr_field_start_-1]` (parser can show the exact place where our refilling ends) \
-> ... \
-> what if parser could choose which data needs to be overwritten? i mean we already got a field, but we didn't reach end of line - we reached unquoted delimiter, so we start read another one after delimiter. In that case we can save start of the next field as `curr_field_start`, read until `eob`, and we checked if `curr_field_start > 0`, if yes, then we call `buffer.refill_until(curr_field_start)` - it will overwrite only first bytes `[0 .. curr_field_start-1]` and update `size_` in buffer `size_ = curr_field_start`, so after that we can read into new `string_view` untill we reach `size_`. If we still need more memory then we will do `std::string curr_field = first_view + second_view`, reset views, read whole buffer and fill the first `string_view` (if we reach `eob` (unlikely) then we just `curr_field += first_view` and overwrite buffer again. \
-
-filled chapter `5.4` by `claude sonnet 4.5` based on my notes above:
-
 ### 5.4.1 Context and Motivation
 
 During the design phase, a critical performance bottleneck was identified: **I/O overhead**. Reading from disk byte-by-byte or line-by-line using `std::getline()` incurs excessive system calls, which are orders of magnitude slower than in-memory operations.
@@ -1051,9 +1037,9 @@ Implement a buffering strategy that:
 while (std::getline(file, line)) { /* parse */ }
 ```
 **Rejected Because:**
-- ❌ Cannot handle quoted newlines (`"Field\nValue"`)
-- ❌ One system call per row (catastrophic for performance)
-- ❌ Forces string allocation per line
+- Cannot handle quoted newlines (`"Field\nValue"`)
+- One system call per row (catastrophic for performance)
+- Forces string allocation per line
 
 ### Approach B: Circular Buffer with Non-Contiguous Data
 **Concept:** Refill only consumed bytes `[0..start)`, leaving unconsumed data `[start..end)` in place.
@@ -1066,22 +1052,9 @@ while (std::getline(file, line)) { /* parse */ }
 Valid regions: [0..2] and [3..7] (non-contiguous!)
 ```
 **Rejected Because:**
-- ❌ `std::string_view` requires contiguous memory
-- ❌ Complexity: parser must track two separate regions
-- ❌ Cannot leverage SIMD for scanning (non-contiguous data)
-
-### Approach C: Always Overwrite (Naive)
-**Concept:** On every `refill()`, discard all data and read a fresh chunk.
-
-**Problem:** Incomplete rows at buffer boundary are lost.
-```
-Buffer: [...data..."John Do]  <- End of buffer
-Next:   [e",25,...]           <- Start of next buffer
-                                 "John Doe" is split!
-```
-**Rejected Because:**
-- ❌ Parser must copy incomplete rows to temporary storage
-- ❌ Worst case: Every row spans boundaries (heavy allocation)
+- `std::string_view` requires contiguous memory
+- Complexity: parser must track two separate regions
+- Cannot leverage SIMD for scanning (non-contiguous data)
 
 ## 5.4.3 Chosen Solution: Parser-Driven Smart Compaction
 

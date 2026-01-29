@@ -6,8 +6,6 @@ namespace csv {
 
 LenientQuotingParser::LenientQuotingParser(const Config& config): QuotingParser(config) {}
 
-// TODO: CODE REFACTOR (split into functions + extract common logic and code into QuotingParser class)
-
 ParseStatus LenientQuotingParser::parse(std::string_view buffer) {
     consumed_ = 0;
     bool quoted_field = false;

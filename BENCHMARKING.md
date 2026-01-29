@@ -66,7 +66,7 @@ BM_SimpleData_ParserComparison_StrictParser/10000/iterations:50   61675026 ns   
 | **ns** | Nanoseconds | `6192000 ns` = 6192 μs |
 | **Mi/s** | Mebibytes per second | `21 Mi/s` ≈ 22 MB/s |
 
-### Performance Rating (according to Claude Opus 4.5)
+### Performance Rating
 
 | Throughput | Rating | Description |
 |------------|--------|-------------|
