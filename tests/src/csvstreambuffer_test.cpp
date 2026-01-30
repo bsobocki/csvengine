@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <csvbuffer.hpp>
+#include <csvbuffer/csvstreambuffer.hpp>
 #include <testdata.hpp>
 #include <string>
 
@@ -28,11 +28,11 @@ void verify_eof(auto& buffer) {
     EXPECT_TRUE(buffer.eof());
 }
 
-TEST(BufferTest, DefaultBuffer64KB_ReadSimpleFile) {
-    using Buffer64KB = Buffer<>;
+TEST(StreamBufferTest, DefaultStreamBuffer64KB_ReadSimpleFile) {
+    using StreamBuffer64KB = StreamBuffer<>;
 
     constexpr size_t expected_refill_size = 137;
-    Buffer64KB buffer(std::make_unique<std::istringstream>(simple_csv_data));
+    StreamBuffer64KB buffer(std::make_unique<std::istringstream>(simple_csv_data));
 
     // read 137 bytes
     verify_buffer_chunk(buffer, simple_csv_data.data(), expected_refill_size);
@@ -41,10 +41,10 @@ TEST(BufferTest, DefaultBuffer64KB_ReadSimpleFile) {
     verify_eof(buffer);
 }
 
-TEST(BufferTest, Buffer40B_ReadSimpleFile_SeveralChunksUntilEof) {
-    using Buffer40B = Buffer<40>;
+TEST(StreamBufferTest, StreamBuffer40B_ReadSimpleFile_SeveralChunksUntilEof) {
+    using StreamBuffer40B = StreamBuffer<40>;
 
-    Buffer40B buffer(std::make_unique<std::istringstream>(simple_csv_data));
+    StreamBuffer40B buffer(std::make_unique<std::istringstream>(simple_csv_data));
 
     EXPECT_TRUE(buffer.good());
 
@@ -64,21 +64,21 @@ TEST(BufferTest, Buffer40B_ReadSimpleFile_SeveralChunksUntilEof) {
     verify_eof(buffer);
 }
 
-TEST(BufferTest, DefaultBuffer64KB_ReadEmptyFile) {
-    using Buffer64KB = Buffer<>;
+TEST(StreamBufferTest, DefaultStreamBuffer64KB_ReadEmptyFile) {
+    using StreamBuffer64KB = StreamBuffer<>;
 
-    Buffer64KB buffer(std::make_unique<std::istringstream>(""));
+    StreamBuffer64KB buffer(std::make_unique<std::istringstream>(""));
 
     EXPECT_EQ(buffer.refill(), ReadingResult::eof);
     EXPECT_EQ(buffer.available(), expected_no_data);
     EXPECT_EQ(buffer.view(), std::string_view());
 }
 
-TEST(BufferTest, DefaultBuffer64KB_ReadFile_OneUnfilledChunkOnly) {
-    using Buffer64KB = Buffer<>;
+TEST(StreamBufferTest, DefaultStreamBuffer64KB_ReadFile_OneUnfilledChunkOnly) {
+    using StreamBuffer64KB = StreamBuffer<>;
     const std::string data = "AAAAAA";
 
-    Buffer64KB buffer(std::make_unique<std::istringstream>(data));
+    StreamBuffer64KB buffer(std::make_unique<std::istringstream>(data));
 
     EXPECT_EQ(buffer.refill(), ReadingResult::ok);
     EXPECT_EQ(buffer.available(), data.size());
@@ -93,8 +93,8 @@ TEST(BufferTest, DefaultBuffer64KB_ReadFile_OneUnfilledChunkOnly) {
     EXPECT_EQ(buffer.view(), std::string_view(data.data()+2));
 }
 
-TEST(BufferTest, Buffer64B_viewDoesNotConsume) {
-    Buffer<64> buffer(std::make_unique<std::istringstream>("test"));
+TEST(StreamBufferTest, StreamBuffer64B_viewDoesNotConsume) {
+    StreamBuffer<64> buffer(std::make_unique<std::istringstream>("test"));
     buffer.refill();
     
     auto data1 = buffer.view();
@@ -104,16 +104,16 @@ TEST(BufferTest, Buffer64B_viewDoesNotConsume) {
     EXPECT_EQ(buffer.available(), 4);
 }
 
-TEST(BufferTest, Buffer64B_consumeMoreThanAvailable) {
-    Buffer<64> buffer(std::make_unique<std::istringstream>("ABC"));
+TEST(StreamBufferTest, StreamBuffer64B_consumeMoreThanAvailable) {
+    StreamBuffer<64> buffer(std::make_unique<std::istringstream>("ABC"));
     buffer.refill();
     
     buffer.consume(100);
     EXPECT_EQ(buffer.available(), 0);
 }
 
-TEST(BufferTest, Buffer64B_Partialconsume) {
-    Buffer<64> buffer(std::make_unique<std::istringstream>("ABCDEF"));
+TEST(StreamBufferTest, StreamBuffer64B_Partialconsume) {
+    StreamBuffer<64> buffer(std::make_unique<std::istringstream>("ABCDEF"));
     buffer.refill();
     
     buffer.consume(3);
@@ -123,8 +123,8 @@ TEST(BufferTest, Buffer64B_Partialconsume) {
     EXPECT_EQ(buffer.view(), "F");
 }
 
-TEST(BufferTest, Buffer64B_PartialConsume) {
-    Buffer<64> buffer(std::make_unique<std::istringstream>("ABCDEF"));
+TEST(StreamBufferTest, StreamBuffer64B_PartialConsume) {
+    StreamBuffer<64> buffer(std::make_unique<std::istringstream>("ABCDEF"));
 
     EXPECT_EQ(buffer.refill(), ReadingResult::ok);
     EXPECT_EQ(buffer.available(), 6);
@@ -138,10 +138,10 @@ TEST(BufferTest, Buffer64B_PartialConsume) {
     EXPECT_EQ(buffer.available(), expected_no_data);
 }
 
-TEST(BufferTest, DefaultBuffer64KB_ConsumeAllAndReset) {
+TEST(StreamBufferTest, DefaultStreamBuffer64KB_ConsumeAllAndReset) {
     auto data = "ABCDEF";
     constexpr size_t data_size = 6;
-    Buffer<> buffer(std::make_unique<std::istringstream>(data));
+    StreamBuffer<> buffer(std::make_unique<std::istringstream>(data));
 
     verify_buffer_chunk(buffer, data, data_size);
     buffer.reset();
@@ -150,9 +150,9 @@ TEST(BufferTest, DefaultBuffer64KB_ConsumeAllAndReset) {
     verify_eof(buffer);
 }
 
-TEST(BufferTest, Buffer4_CompactMovesData) {
+TEST(StreamBufferTest, StreamBuffer4_CompactMovesData) {
     auto data = "ABCDEF";
-    Buffer<4> buffer(std::make_unique<std::istringstream>(data));
+    StreamBuffer<4> buffer(std::make_unique<std::istringstream>(data));
 
     EXPECT_EQ(buffer.refill(), ReadingResult::ok);
     EXPECT_EQ(buffer.available(), 4);
@@ -164,8 +164,8 @@ TEST(BufferTest, Buffer4_CompactMovesData) {
     EXPECT_EQ(buffer.view(), "CDEF");
 }
 
-TEST(BufferTests, Buffer4_BufferFullWithoutConsume) {
-    Buffer<4> buffer(std::make_unique<std::istringstream>("ABCDEFGH"));
+TEST(StreamBufferTests, StreamBuffer4_StreamBufferFullWithoutConsume) {
+    StreamBuffer<4> buffer(std::make_unique<std::istringstream>("ABCDEFGH"));
 
     EXPECT_EQ(buffer.refill(), ReadingResult::ok);
     EXPECT_EQ(buffer.available(), 4);
@@ -175,8 +175,8 @@ TEST(BufferTests, Buffer4_BufferFullWithoutConsume) {
     EXPECT_EQ(buffer.view(), "ABCD");
 }
 
-TEST(BufferTests, Buffer64_ConsumeZeroBytes_EOF) {
-    Buffer<64> buffer(std::make_unique<std::istringstream>("ABC"));
+TEST(StreamBufferTests, StreamBuffer64_ConsumeZeroBytes_EOF) {
+    StreamBuffer<64> buffer(std::make_unique<std::istringstream>("ABC"));
 
     EXPECT_EQ(buffer.refill(), ReadingResult::ok);
     EXPECT_EQ(buffer.available(), 3);
@@ -190,8 +190,8 @@ TEST(BufferTests, Buffer64_ConsumeZeroBytes_EOF) {
     EXPECT_EQ(buffer.view(), "ABC");
 }
 
-TEST(BufferTests, Buffer64_ConsumeZeroBytes_BufferFull) {
-    Buffer<3> buffer(std::make_unique<std::istringstream>("ABCD"));
+TEST(StreamBufferTests, StreamBuffer64_ConsumeZeroBytes_StreamBufferFull) {
+    StreamBuffer<3> buffer(std::make_unique<std::istringstream>("ABCD"));
 
     EXPECT_EQ(buffer.refill(), ReadingResult::ok);
     EXPECT_EQ(buffer.available(), 3);
@@ -216,16 +216,16 @@ TEST(BufferTests, Buffer64_ConsumeZeroBytes_BufferFull) {
     verify_eof(buffer);
 }
 
-TEST(BufferTests, DefaultBuffer64K_EmptyBeforeFirstRefill) {
-    Buffer<3> buffer(std::make_unique<std::istringstream>("ABCD"));
+TEST(StreamBufferTests, DefaultStreamBuffer64K_EmptyBeforeFirstRefill) {
+    StreamBuffer<3> buffer(std::make_unique<std::istringstream>("ABCD"));
 
     EXPECT_TRUE(buffer.empty());
     EXPECT_EQ(buffer.available(), 0);
     EXPECT_EQ(buffer.view(), "");
 }
 
-TEST(BufferTest, Buffer64_MultipleRefillsAtEof) {
-    Buffer<64> buffer(std::make_unique<std::istringstream>("A"));
+TEST(StreamBufferTest, StreamBuffer64_MultipleRefillsAtEof) {
+    StreamBuffer<64> buffer(std::make_unique<std::istringstream>("A"));
     
     buffer.refill();
     buffer.consume(1);
@@ -235,8 +235,8 @@ TEST(BufferTest, Buffer64_MultipleRefillsAtEof) {
     EXPECT_EQ(buffer.refill(), ReadingResult::eof);
 }
 
-TEST(BufferTest, Buffer4_ExactFit) {
-    Buffer<4> buffer(std::make_unique<std::istringstream>("ABCD"));
+TEST(StreamBufferTest, StreamBuffer4_ExactFit) {
+    StreamBuffer<4> buffer(std::make_unique<std::istringstream>("ABCD"));
     
     EXPECT_EQ(buffer.refill(), ReadingResult::ok);
     EXPECT_EQ(buffer.available(), 4);
@@ -246,8 +246,8 @@ TEST(BufferTest, Buffer4_ExactFit) {
     EXPECT_EQ(buffer.refill(), ReadingResult::eof);
 }
 
-TEST(BufferTest, Buffer4_DataOneByteMoreThanBuffer) {
-    Buffer<4> buffer(std::make_unique<std::istringstream>("ABCDE"));
+TEST(StreamBufferTest, StreamBuffer4_DataOneByteMoreThanStreamBuffer) {
+    StreamBuffer<4> buffer(std::make_unique<std::istringstream>("ABCDE"));
     
     EXPECT_EQ(buffer.refill(), ReadingResult::ok);
     EXPECT_EQ(buffer.view(), "ABCD");
@@ -257,8 +257,8 @@ TEST(BufferTest, Buffer4_DataOneByteMoreThanBuffer) {
     EXPECT_EQ(buffer.view(), "E");
 }
 
-TEST(BufferTest, Buffer4_CompactWithNoLeftover) {
-    Buffer<4> buffer(std::make_unique<std::istringstream>("ABCD"));
+TEST(StreamBufferTest, StreamBuffer4_CompactWithNoLeftover) {
+    StreamBuffer<4> buffer(std::make_unique<std::istringstream>("ABCD"));
     
     buffer.refill();
     buffer.consume(4);  // consume all
@@ -267,8 +267,8 @@ TEST(BufferTest, Buffer4_CompactWithNoLeftover) {
     EXPECT_EQ(buffer.available(), 0);
 }
 
-TEST(BufferTest, Buffer4_CompactWithAllLeftover) {
-    Buffer<4> buffer(std::make_unique<std::istringstream>("ABCDEFGH"));
+TEST(StreamBufferTest, StreamBuffer4_CompactWithAllLeftover) {
+    StreamBuffer<4> buffer(std::make_unique<std::istringstream>("ABCDEFGH"));
     
     buffer.refill();
     // Don't consume anything, compact should be no-op
@@ -278,8 +278,8 @@ TEST(BufferTest, Buffer4_CompactWithAllLeftover) {
     EXPECT_EQ(buffer.view(), "ABCD");
 }
 
-TEST(BufferTest, Buffer64_GoodStateTransitions) {
-    Buffer<64> buffer(std::make_unique<std::istringstream>("AB"));
+TEST(StreamBufferTest, StreamBuffer64_GoodStateTransitions) {
+    StreamBuffer<64> buffer(std::make_unique<std::istringstream>("AB"));
     
     EXPECT_TRUE(buffer.good());
     EXPECT_FALSE(buffer.eof());
@@ -296,8 +296,8 @@ TEST(BufferTest, Buffer64_GoodStateTransitions) {
     EXPECT_TRUE(buffer.eof());
 }
 
-TEST(BufferTest, Buffer64_ResetBeforeAnyRead) {
-    Buffer<64> buffer(std::make_unique<std::istringstream>("ABC"));
+TEST(StreamBufferTest, StreamBuffer64_ResetBeforeAnyRead) {
+    StreamBuffer<64> buffer(std::make_unique<std::istringstream>("ABC"));
     
     buffer.reset();  // reset without any operations
     
@@ -305,8 +305,8 @@ TEST(BufferTest, Buffer64_ResetBeforeAnyRead) {
     EXPECT_EQ(buffer.view(), "ABC");
 }
 
-TEST(BufferTest, Buffer64_ResetMidStream) {
-    Buffer<64> buffer(std::make_unique<std::istringstream>("ABCDEF"));
+TEST(StreamBufferTest, StreamBuffer64_ResetMidStream) {
+    StreamBuffer<64> buffer(std::make_unique<std::istringstream>("ABCDEF"));
     
     buffer.refill();
     buffer.consume(3);
@@ -318,8 +318,8 @@ TEST(BufferTest, Buffer64_ResetMidStream) {
     EXPECT_EQ(buffer.view(), "ABCDEF");  // back to start
 }
 
-TEST(BufferTest, Buffer1_SingleByteBuffer) {
-    Buffer<1> buffer(std::make_unique<std::istringstream>("ABC"));
+TEST(StreamBufferTest, StreamBuffer1_SingleByteStreamBuffer) {
+    StreamBuffer<1> buffer(std::make_unique<std::istringstream>("ABC"));
     
     EXPECT_EQ(buffer.refill(), ReadingResult::ok);
     EXPECT_EQ(buffer.view(), "A");
@@ -339,8 +339,8 @@ TEST(BufferTest, Buffer1_SingleByteBuffer) {
 }
 
 
-TEST(BufferTest, Buffer24_ConsumeMoreThanCapacity) {
-    Buffer<24> buffer(std::make_unique<std::istringstream>("ABC"));
+TEST(StreamBufferTest, StreamBuffer24_ConsumeMoreThanCapacity) {
+    StreamBuffer<24> buffer(std::make_unique<std::istringstream>("ABC"));
 
     buffer.consume(100);
     EXPECT_EQ(buffer.available(), 0);
@@ -351,28 +351,28 @@ TEST(BufferTest, Buffer24_ConsumeMoreThanCapacity) {
     EXPECT_EQ(buffer.available(), 0);
 }
 
-TEST(BufferTest, Buffer64_BinaryDataWithNullBytes) {
+TEST(StreamBufferTest, StreamBuffer64_BinaryDataWithNullBytes) {
     std::string data = "AB\0CD\0EF"s;  // nulls in string literal
-    Buffer<64> buffer(std::make_unique<std::istringstream>(data));
+    StreamBuffer<64> buffer(std::make_unique<std::istringstream>(data));
     
     buffer.refill();
     EXPECT_EQ(buffer.available(), 8);
     EXPECT_EQ(buffer.view(), std::string_view(data));
 }
 
-TEST(BufferTest, ThrowsWhenFileDoesNotExist) {
+TEST(StreamBufferTest, ThrowsWhenFileDoesNotExist) {
     EXPECT_THROW({
-        csv::make_buffer("/non_existent/path/to/file.csv");
+        csv::make_stream_buffer("/non_existent/path/to/file.csv");
     }, csv::FileStreamError);
 }
 
-TEST(BufferTest, ThrowsOnInvalidIstream) {
+TEST(StreamBufferTest, ThrowsOnInvalidIstream) {
     auto ss = std::make_unique<std::istringstream>("");
     
     // force istream into a 'fail' state
     ss->setstate(std::ios::failbit);
 
     EXPECT_THROW({
-        csv::Buffer<1024> buffer(std::move(ss));
+        csv::StreamBuffer<1024> buffer(std::move(ss));
     }, csv::FileStreamError);
 }

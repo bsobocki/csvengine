@@ -10,7 +10,7 @@
 
 #include <csvconfig.hpp>
 #include <csvrecord.hpp>
-#include <csvbuffer.hpp>
+#include <csvbuffer/csvbuffer.hpp>
 #include <csvparser.hpp>
 
 namespace csv {

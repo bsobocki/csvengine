@@ -1,5 +1,5 @@
 #include <gmock/gmock.h>
-#include <csvbuffer.hpp>
+#include <csvbuffer/csvbuffer.hpp>
 
 namespace csv {
 

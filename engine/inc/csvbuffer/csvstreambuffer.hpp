@@ -8,33 +8,15 @@
 #include <cstring>
 #include <stdexcept>
 
+#include <csvbuffer/csvbuffer.hpp>
 #include <csverrors.hpp>
 
 namespace csv {
 
-enum class ReadingResult { ok, eof, buffer_full, fail };
-
-// 2KB chosen to optimize for L1 Cache locality (See BENCHMARKING.md)
-constexpr size_t DEFAULT_CAPACITY = 2048;
-
-class IBuffer {
-public:
-    virtual ~IBuffer() = default;
-
-    virtual ReadingResult refill() = 0;
-    virtual std::string_view view() const = 0;
-    virtual void consume(size_t bytes) = 0;
-    virtual size_t available() const = 0;
-    virtual bool empty() const = 0;
-    virtual bool eof() const = 0;
-    virtual bool good() const = 0;
-    virtual bool reset() = 0;
-};
-
 template <size_t N = DEFAULT_CAPACITY>
-class Buffer : public IBuffer {
+class StreamBuffer : public IBuffer {
     public:
-        explicit Buffer(std::string_view filename)
+        explicit StreamBuffer(std::string_view filename)
             : stream_(std::make_unique<std::ifstream>(std::string(filename), std::ios::binary))
             , data_(std::make_unique<char[]>(N))
         {
@@ -44,7 +26,7 @@ class Buffer : public IBuffer {
         }
 
         // for testing
-        explicit Buffer(std::unique_ptr<std::istream> stream)
+        explicit StreamBuffer(std::unique_ptr<std::istream> stream)
             : stream_(std::move(stream))
             , data_(std::make_unique<char[]>(N))
         {
@@ -54,11 +36,11 @@ class Buffer : public IBuffer {
             }
         }
 
-        Buffer(const Buffer&) = delete;
-        Buffer& operator=(const Buffer&) = delete;
+        StreamBuffer(const StreamBuffer&) = delete;
+        StreamBuffer& operator=(const StreamBuffer&) = delete;
 
-        Buffer(Buffer&&) noexcept = default;
-        Buffer& operator=(Buffer&&) noexcept = default;
+        StreamBuffer(StreamBuffer&&) noexcept = default;
+        StreamBuffer& operator=(StreamBuffer&&) noexcept = default;
 
         ReadingResult refill() override {
             compact();
@@ -136,13 +118,13 @@ class Buffer : public IBuffer {
 };
 
 template<size_t N = DEFAULT_CAPACITY>
-std::unique_ptr<IBuffer> make_buffer(std::string_view filename) {
-    return std::make_unique<Buffer<N>>(filename);
+std::unique_ptr<IBuffer> make_stream_buffer(std::string_view filename) {
+    return std::make_unique<StreamBuffer<N>>(filename);
 }
 
 template<size_t N = DEFAULT_CAPACITY>
-std::unique_ptr<IBuffer> make_buffer(std::unique_ptr<std::istream> stream) {
-    return std::make_unique<Buffer<N>>(std::move(stream));
+std::unique_ptr<IBuffer> make_stream_buffer(std::unique_ptr<std::istream> stream) {
+    return std::make_unique<StreamBuffer<N>>(std::move(stream));
 }
 
 }

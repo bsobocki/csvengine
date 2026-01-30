@@ -1,6 +1,6 @@
 #include<benchmark/benchmark.h>
 
-#include <csvbuffer.hpp>
+#include <csvbuffer/csvstreambuffer.hpp>
 #include <csvreader.hpp>
 #include <csvconfig.hpp>
 
@@ -14,8 +14,8 @@ constexpr int64_t small_data  = 100;
 constexpr int64_t medium_data = 1000;
 constexpr int64_t big_data    = 10000;
 
-// Benchmark: Reader with custom buffer sizes (Buffer<N>)
-// This exercises Buffer::compact() + refill patterns more directly.
+// Benchmark: Reader with custom buffer sizes (StreamBuffer<N>)
+// This exercises StreamBuffer::compact() + refill patterns more directly.
 template <size_t N>
 static void BM_Reader_BufferSized_EndToEnd(benchmark::State& state) {
     const int repeats = static_cast<int>(state.range(0));
@@ -32,8 +32,8 @@ static void BM_Reader_BufferSized_EndToEnd(benchmark::State& state) {
     for (auto _ : state) {
         auto stream = std::make_unique<std::istringstream>(csv_text);
 
-        // Use your Buffer<N>(istream) constructor
-        auto buffer = std::make_unique<Buffer<N>>(std::move(stream));
+        // Use your StreamBuffer<N>(istream) constructor
+        auto buffer = std::make_unique<StreamBuffer<N>>(std::move(stream));
         Reader reader(std::move(buffer), cfg);
 
         while (reader.next()) {
