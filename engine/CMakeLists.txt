@@ -4,6 +4,7 @@ add_library(csvengine
     src/csvparser_quoting_strict_parser.cpp
     src/csvparser_quoting_lenient_parser.cpp
     src/csvreader.cpp
+    src/csvmappedbuffer.cpp
 )
 
 # public headers for the 'csvengine' library are located in the 'inc' directory.
