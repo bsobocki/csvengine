@@ -2,7 +2,7 @@
 
 #include <cstddef>
 #include <string_view>
-
+#include <memory>
 #include <csvbuffer/csvbuffer.hpp>
 
 namespace csv {

@@ -1,9 +1,8 @@
 #include <csvbuffer/csvmappedbuffer.hpp>
-#include <algorithm> // for std::min
-#include <string>    // needed for converting string_view to string
+#include <algorithm>
+#include <string>
 #include <stdexcept>
 
-// System headers
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -13,7 +12,6 @@
 namespace csv {
 
 MappedBuffer::MappedBuffer(std::string_view filename) {
-    // 1. Safe Null-Termination
     std::string safe_name(filename);
 
     int fd = open(safe_name.c_str(), O_RDONLY);
@@ -36,7 +34,7 @@ MappedBuffer::MappedBuffer(std::string_view filename) {
     }
 
     void* addr = mmap(nullptr, size_, PROT_READ, MAP_PRIVATE, fd, 0);
-    close(fd); // Can close immediately
+    close(fd);
 
     if (addr == MAP_FAILED) {
         throw std::runtime_error("File memory mapping failed.");
@@ -51,6 +49,10 @@ MappedBuffer::~MappedBuffer() {
     if (data_) {
         munmap(data_, size_);
     }
+}
+
+MappedBuffer::MappedBuffer(MappedBuffer&& other) noexcept {
+    *this = std::move(other);
 }
 
 MappedBuffer& MappedBuffer::operator=(MappedBuffer&& other) noexcept {
@@ -68,14 +70,12 @@ MappedBuffer& MappedBuffer::operator=(MappedBuffer&& other) noexcept {
     return *this;
 }
 
-MappedBuffer::MappedBuffer(MappedBuffer&& other) noexcept {
-    operator=(std::move(other));
-}
-
 ReadingResult MappedBuffer::refill() {
-    if (!data_ && size_ > 0) return ReadingResult::fail;
+    if (!data_) return ReadingResult::fail;
 
-    if (!data_ || start_ >= size_) return ReadingResult::eof;
+    if (start_ >= size_) {
+        return ReadingResult::eof;
+    }
 
     return ReadingResult::ok;
 }
@@ -102,12 +102,12 @@ bool MappedBuffer::eof() const noexcept {
 }
 
 bool MappedBuffer::good() const noexcept {
-    return data_ != nullptr;
+    return data_ != nullptr && !eof();
 }
 
 bool MappedBuffer::reset() {
     start_ = 0;
-    return (data_ != nullptr || size_ == 0);
+    return (data_ != nullptr);
 }
 
 }
