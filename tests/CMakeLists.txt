@@ -6,6 +6,7 @@ add_executable(run_tests
   src/csvparser_tests/csvparser_quoting_strict_test.cpp
   src/csvparser_tests/csvparser_simple_test.cpp
   src/csvrecord_test.cpp
+  src/csvmappedbuffer_test.cpp
 )
 
 # Link our test executable against:
