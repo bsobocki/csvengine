@@ -5,6 +5,24 @@
 Performance benchmarks for `csvengine` parser implementations across different data sizes, parsing modes, and buffer configurations.\
 Default Buffer Size during tests is 65536 -> 64 KB chunk. After results the default buffer capacity has been changed to 2 KB.
 
+Simple CSV Data (138 bytes):
+```csv
+name,age,country
+Ken Adams,18,USA
+Cristiano Ronaldo,35,Portugal
+Gunter Shmitt,45,Germany
+Andrzej Kowalski,55,Poland
+John Krasinski,40,USA
+```
+
+Quoted CSV Data (178 bytes):
+```csv
+"Product","Description","Price, but Netto"
+"Widget A","Standard widget, 5"" diameter","$10.99"
+"Widget ""Pro""","Professional grade, includes:
+- Feature 1
+- Feature 2","$49.99"
+```
 ---
 
 ## How to Run Benchmarks
@@ -210,6 +228,30 @@ Testing different internal buffer sizes to find optimal configuration.
 | **Quoted data overhead** | ~26% slower |
 | **Lenient mode overhead** | ~24-48% slower |
 
+## Comparison Default StreamBuffer vs MappedBuffer
+
+Newly added benchmarks `benchmarks/src/buffers_comparison_benchmark.cpp` shows that changing buffer from `StreamBuffer` to `MappedBuffer` increases performance ~ 8-10 % because we read directly from the file, we don't copy any content of csv file.
+
+#### Throughput Improvement (Higher is Better)
+| Dataset Size | Scenario | StreamBuffer | MappedBuffer | Improvement |
+| :--- | :--- | :--- | :--- | :--- |
+| **Small (0.0132 MB)** | Simple Data | 816k rows/s | **860k rows/s** | **+5.3%** |
+| **Small (0.017 MB)** | Quoted Data | 561k rows/s | **597k rows/s** | **+6.4%** |
+| | | | | |
+| **Medium (0.132 MB)** | Simple Data | 902k rows/s | **972k rows/s** | **+7.7%** |
+| **Medium (0.17 MB)** | Quoted Data | 631k rows/s | **702k rows/s** | **+11.3%** |
+| | | | | |
+| **Big (1.32 MB)** | Simple Data | 902k rows/s | **973k rows/s** | **+7.9%** |
+| **Big (1.7 MB)** | Quoted Data | 637k rows/s | **708k rows/s** | **+11.1%** |
+| | | | | |
+| **Huge (132 MB)** | Simple Data | 908k rows/s | **993k rows/s** | **+9.3%** |
+| **Huge (170 MB)** | Quoted Data | 638k rows/s | **707k rows/s** | **+10.8%** |
+
+#### Efficiency (CPU Time) (Lower is Better)
+*For Huge Simple Data:*
+*   **StreamBuffer:** 6.61s CPU time
+*   **MappedBuffer:** 6.04s CPU time
+*   **Result:** `MappedBuffer` does the same work using **~9.4% less CPU**, freeing up the processor for other threads.
 
 ## Recommendations
 
@@ -243,65 +285,82 @@ Testing different internal buffer sizes to find optimal configuration.
 <summary>Click to expand full benchmark output</summary>
 
 ```
-BM_SimpleData_ParserComparison_SimpleParser/100/iterations:50        675694 ns       676610 ns           50 bytes_per_second=19.4509Mi/s items_per_second=885.296k/s
-BM_SimpleData_ParserComparison_StrictParser/100/iterations:50        642308 ns       643208 ns           50 bytes_per_second=20.461Mi/s items_per_second=931.27k/s
-BM_SimpleData_ParserComparison_LenientParser/100/iterations:50       818692 ns       819848 ns           50 bytes_per_second=16.0526Mi/s items_per_second=730.623k/s
-BM_SimpleData_ParserComparison_SimpleParser/1000/iterations:50      6538379 ns      6547006 ns           50 bytes_per_second=20.1019Mi/s items_per_second=916.297k/s
-BM_SimpleData_ParserComparison_StrictParser/1000/iterations:50      6192617 ns      6200792 ns           50 bytes_per_second=21.2242Mi/s items_per_second=967.457k/s
-BM_SimpleData_ParserComparison_LenientParser/1000/iterations:50     7774738 ns      7785132 ns           50 bytes_per_second=16.9049Mi/s items_per_second=770.571k/s
-BM_SimpleData_ParserComparison_SimpleParser/10000/iterations:50    64667186 ns     64983390 ns           50 bytes_per_second=20.2524Mi/s items_per_second=923.297k/s
-BM_SimpleData_ParserComparison_StrictParser/10000/iterations:50    61675026 ns     61842958 ns           50 bytes_per_second=21.2808Mi/s items_per_second=970.183k/s
-BM_SimpleData_ParserComparison_LenientParser/10000/iterations:50   76803069 ns     76854814 ns           50 bytes_per_second=17.1241Mi/s items_per_second=780.68k/s
-BM_QuotedData_ParserComparison_StrictParser/100/iterations:50        438289 ns       438410 ns           50 bytes_per_second=38.5029Mi/s items_per_second=682.01k/s
-BM_QuotedData_ParserComparison_LenientParser/100/iterations:50       647880 ns       648044 ns           50 bytes_per_second=26.0477Mi/s items_per_second=461.388k/s
-BM_QuotedData_ParserComparison_StrictParser/1000/iterations:50      4181943 ns      4182680 ns           50 bytes_per_second=40.357Mi/s items_per_second=717.004k/s
-BM_QuotedData_ParserComparison_LenientParser/1000/iterations:50     6185239 ns      6186212 ns           50 bytes_per_second=27.2865Mi/s items_per_second=484.788k/s
-BM_QuotedData_ParserComparison_StrictParser/10000/iterations:50    42078439 ns     42086608 ns           50 bytes_per_second=40.1079Mi/s items_per_second=712.792k/s
-BM_QuotedData_ParserComparison_LenientParser/10000/iterations:50   62192214 ns     62207176 ns           50 bytes_per_second=27.1352Mi/s items_per_second=482.243k/s
+BM_SimpleData_ParserComparison_SimpleParser/100/iterations:50        675694 ns       676610 ns           50   bytes_per_second=19.4509Mi/s  items_per_second=885.296k/s
+BM_SimpleData_ParserComparison_StrictParser/100/iterations:50        642308 ns       643208 ns           50   bytes_per_second=20.461Mi/s   items_per_second=931.27k/s
+BM_SimpleData_ParserComparison_LenientParser/100/iterations:50       818692 ns       819848 ns           50   bytes_per_second=16.0526Mi/s  items_per_second=730.623k/s
+BM_SimpleData_ParserComparison_SimpleParser/1000/iterations:50      6538379 ns      6547006 ns           50   bytes_per_second=20.1019Mi/s  items_per_second=916.297k/s
+BM_SimpleData_ParserComparison_StrictParser/1000/iterations:50      6192617 ns      6200792 ns           50   bytes_per_second=21.2242Mi/s  items_per_second=967.457k/s
+BM_SimpleData_ParserComparison_LenientParser/1000/iterations:50     7774738 ns      7785132 ns           50   bytes_per_second=16.9049Mi/s  items_per_second=770.571k/s
+BM_SimpleData_ParserComparison_SimpleParser/10000/iterations:50    64667186 ns     64983390 ns           50   bytes_per_second=20.2524Mi/s  items_per_second=923.297k/s
+BM_SimpleData_ParserComparison_StrictParser/10000/iterations:50    61675026 ns     61842958 ns           50   bytes_per_second=21.2808Mi/s  items_per_second=970.183k/s
+BM_SimpleData_ParserComparison_LenientParser/10000/iterations:50   76803069 ns     76854814 ns           50   bytes_per_second=17.1241Mi/s  items_per_second=780.68k/s
+BM_QuotedData_ParserComparison_StrictParser/100/iterations:50        438289 ns       438410 ns           50   bytes_per_second=38.5029Mi/s  items_per_second=682.01k/s
+BM_QuotedData_ParserComparison_LenientParser/100/iterations:50       647880 ns       648044 ns           50   bytes_per_second=26.0477Mi/s  items_per_second=461.388k/s
+BM_QuotedData_ParserComparison_StrictParser/1000/iterations:50      4181943 ns      4182680 ns           50   bytes_per_second=40.357Mi/s   items_per_second=717.004k/s
+BM_QuotedData_ParserComparison_LenientParser/1000/iterations:50     6185239 ns      6186212 ns           50   bytes_per_second=27.2865Mi/s  items_per_second=484.788k/s
+BM_QuotedData_ParserComparison_StrictParser/10000/iterations:50    42078439 ns     42086608 ns           50   bytes_per_second=40.1079Mi/s  items_per_second=712.792k/s
+BM_QuotedData_ParserComparison_LenientParser/10000/iterations:50   62192214 ns     62207176 ns           50   bytes_per_second=27.1352Mi/s  items_per_second=482.243k/s
 
-BM_Reader_Stream_EndToEnd/50                                         320409 ns       320501 ns         2175 bytes_per_second=20.5315Mi/s items_per_second=932.916k/s
-BM_Reader_Stream_EndToEnd/1000                                      6241932 ns      6247243 ns           96 bytes_per_second=21.0664Mi/s items_per_second=960.264k/s
-BM_Reader_Stream_EndToEnd/10000                                    62819526 ns     62801791 ns           11 bytes_per_second=20.9559Mi/s items_per_second=955.371k/s
-BM_Reader_QuotedData_EndToEnd/50                                     220573 ns       220391 ns         3165 bytes_per_second=38.2956Mi/s items_per_second=676.07k/s
-BM_Reader_QuotedData_EndToEnd/1000                                  4153977 ns      4150615 ns          168 bytes_per_second=40.6688Mi/s items_per_second=722.544k/s
-BM_Reader_QuotedData_EndToEnd/10000                                42342710 ns     42308671 ns           17 bytes_per_second=39.8973Mi/s items_per_second=709.051k/s
+BM_Reader_Stream_EndToEnd/50                                         320409 ns       320501 ns         2175   bytes_per_second=20.5315Mi/s  items_per_second=932.916k/s
+BM_Reader_Stream_EndToEnd/1000                                      6241932 ns      6247243 ns           96   bytes_per_second=21.0664Mi/s  items_per_second=960.264k/s
+BM_Reader_Stream_EndToEnd/10000                                    62819526 ns     62801791 ns           11   bytes_per_second=20.9559Mi/s  items_per_second=955.371k/s
+BM_Reader_QuotedData_EndToEnd/50                                     220573 ns       220391 ns         3165   bytes_per_second=38.2956Mi/s  items_per_second=676.07k/s
+BM_Reader_QuotedData_EndToEnd/1000                                  4153977 ns      4150615 ns          168   bytes_per_second=40.6688Mi/s  items_per_second=722.544k/s
+BM_Reader_QuotedData_EndToEnd/10000                                42342710 ns     42308671 ns           17   bytes_per_second=39.8973Mi/s  items_per_second=709.051k/s
 
-BM_Reader_BufferSized_EndToEnd<64>/100                               666910 ns       663800 ns         1037 bytes_per_second=19.8263Mi/s items_per_second=902.381k/s
-BM_Reader_BufferSized_EndToEnd<64>/1000                             6765188 ns      6700634 ns          103 bytes_per_second=19.641Mi/s items_per_second=895.288k/s
-BM_Reader_BufferSized_EndToEnd<64>/10000                           66823755 ns     66259200 ns           10 bytes_per_second=19.8625Mi/s items_per_second=905.52k/s
-BM_Reader_BufferSized_EndToEnd<256>/100                              636596 ns       633381 ns         1070 bytes_per_second=20.7785Mi/s items_per_second=945.719k/s
-BM_Reader_BufferSized_EndToEnd<256>/1000                            6370742 ns      6346827 ns          109 bytes_per_second=20.7359Mi/s items_per_second=945.197k/s
-BM_Reader_BufferSized_EndToEnd<256>/10000                          63049836 ns     62853900 ns           11 bytes_per_second=20.9386Mi/s items_per_second=954.579k/s
-BM_Reader_BufferSized_EndToEnd<1024>/100                             629246 ns       627723 ns         1091 bytes_per_second=20.9658Mi/s items_per_second=954.243k/s
-BM_Reader_BufferSized_EndToEnd<1024>/1000                           6345749 ns      6323305 ns          107 bytes_per_second=20.813Mi/s items_per_second=948.713k/s
-BM_Reader_BufferSized_EndToEnd<1024>/10000                         62617055 ns     62539282 ns           11 bytes_per_second=21.0439Mi/s items_per_second=959.381k/s
-BM_Reader_BufferSized_EndToEnd<2048>/100                             624270 ns       623758 ns         1093 bytes_per_second=21.0991Mi/s items_per_second=960.309k/s
-BM_Reader_BufferSized_EndToEnd<2048>/1000                           6226889 ns      6222474 ns          110 bytes_per_second=21.1503Mi/s items_per_second=964.086k/s
-BM_Reader_BufferSized_EndToEnd<2048>/10000                         61955171 ns     61857345 ns           11 bytes_per_second=21.2759Mi/s items_per_second=969.958k/s
-BM_Reader_BufferSized_EndToEnd<4096>/100                             623886 ns       623059 ns         1112 bytes_per_second=21.1227Mi/s items_per_second=961.386k/s
-BM_Reader_BufferSized_EndToEnd<4096>/1000                           6237737 ns      6223775 ns          109 bytes_per_second=21.1459Mi/s items_per_second=963.884k/s
-BM_Reader_BufferSized_EndToEnd<4096>/10000                         61930665 ns     61912700 ns           11 bytes_per_second=21.2569Mi/s items_per_second=969.09k/s
-BM_Reader_BufferSized_EndToEnd<65536>/100                            637067 ns       637105 ns         1098 bytes_per_second=20.657Mi/s items_per_second=940.191k/s
-BM_Reader_BufferSized_EndToEnd<65536>/1000                          6245788 ns      6236082 ns          109 bytes_per_second=21.1041Mi/s items_per_second=961.982k/s
-BM_Reader_BufferSized_EndToEnd<65536>/10000                        63260847 ns     63288645 ns           11 bytes_per_second=20.7947Mi/s items_per_second=948.022k/s
-BM_Reader_BufferSized_EndToEnd<64>/100/iterations:50                 684463 ns       684940 ns           50 bytes_per_second=19.2144Mi/s items_per_second=874.529k/s
-BM_Reader_BufferSized_EndToEnd<256>/100/iterations:50                640369 ns       640826 ns           50 bytes_per_second=20.5371Mi/s items_per_second=934.731k/s
-BM_Reader_BufferSized_EndToEnd<1024>/100/iterations:50               650686 ns       651230 ns           50 bytes_per_second=20.209Mi/s items_per_second=919.798k/s
-BM_Reader_BufferSized_EndToEnd<2048>/100/iterations:50               643245 ns       643684 ns           50 bytes_per_second=20.4459Mi/s items_per_second=930.581k/s
-BM_Reader_BufferSized_EndToEnd<4096>/100/iterations:50               633670 ns       634154 ns           50 bytes_per_second=20.7532Mi/s items_per_second=944.566k/s
-BM_Reader_BufferSized_EndToEnd<65536>/100/iterations:50              647576 ns       648056 ns           50 bytes_per_second=20.308Mi/s items_per_second=924.303k/s
-BM_Reader_BufferSized_EndToEnd<64>/1000/iterations:50               6680978 ns      6685244 ns           50 bytes_per_second=19.6862Mi/s items_per_second=897.349k/s
-BM_Reader_BufferSized_EndToEnd<256>/1000/iterations:50              6371853 ns      6376022 ns           50 bytes_per_second=20.6409Mi/s items_per_second=940.869k/s
-BM_Reader_BufferSized_EndToEnd<1024>/1000/iterations:50             6414567 ns      6420156 ns           50 bytes_per_second=20.499Mi/s items_per_second=934.401k/s
-BM_Reader_BufferSized_EndToEnd<2048>/1000/iterations:50             6325942 ns      6298628 ns           50 bytes_per_second=20.8946Mi/s items_per_second=952.43k/s
-BM_Reader_BufferSized_EndToEnd<4096>/1000/iterations:50             6296813 ns      6302304 ns           50 bytes_per_second=20.8824Mi/s items_per_second=951.874k/s
-BM_Reader_BufferSized_EndToEnd<65536>/1000/iterations:50            6333703 ns      6340530 ns           50 bytes_per_second=20.7565Mi/s items_per_second=946.135k/s
-BM_Reader_BufferSized_EndToEnd<64>/10000/iterations:50             66233801 ns     66337664 ns           50 bytes_per_second=19.839Mi/s items_per_second=904.448k/s
-BM_Reader_BufferSized_EndToEnd<256>/10000/iterations:50            63234566 ns     63428082 ns           50 bytes_per_second=20.749Mi/s items_per_second=945.937k/s
-BM_Reader_BufferSized_EndToEnd<1024>/10000/iterations:50           65163044 ns     65367056 ns           50 bytes_per_second=20.1335Mi/s items_per_second=917.878k/s
-BM_Reader_BufferSized_EndToEnd<2048>/10000/iterations:50           62827465 ns     62935332 ns           50 bytes_per_second=20.9115Mi/s items_per_second=953.344k/s
-BM_Reader_BufferSized_EndToEnd<4096>/10000/iterations:50           63179781 ns     63286986 ns           50 bytes_per_second=20.7953Mi/s items_per_second=948.046k/s
-BM_Reader_BufferSized_EndToEnd<65536>/10000/iterations:50          63190286 ns     63009562 ns           50 bytes_per_second=20.8868Mi/s items_per_second=952.221k/s
+BM_Reader_BufferSized_EndToEnd<64>/100                               666910 ns       663800 ns         1037   bytes_per_second=19.8263Mi/s  items_per_second=902.381k/s
+BM_Reader_BufferSized_EndToEnd<64>/1000                             6765188 ns      6700634 ns          103   bytes_per_second=19.641Mi/s   items_per_second=895.288k/s
+BM_Reader_BufferSized_EndToEnd<64>/10000                           66823755 ns     66259200 ns           10   bytes_per_second=19.8625Mi/s  items_per_second=905.52k/s
+BM_Reader_BufferSized_EndToEnd<256>/100                              636596 ns       633381 ns         1070   bytes_per_second=20.7785Mi/s  items_per_second=945.719k/s
+BM_Reader_BufferSized_EndToEnd<256>/1000                            6370742 ns      6346827 ns          109   bytes_per_second=20.7359Mi/s  items_per_second=945.197k/s
+BM_Reader_BufferSized_EndToEnd<256>/10000                          63049836 ns     62853900 ns           11   bytes_per_second=20.9386Mi/s  items_per_second=954.579k/s
+BM_Reader_BufferSized_EndToEnd<1024>/100                             629246 ns       627723 ns         1091   bytes_per_second=20.9658Mi/s  items_per_second=954.243k/s
+BM_Reader_BufferSized_EndToEnd<1024>/1000                           6345749 ns      6323305 ns          107   bytes_per_second=20.813Mi/s   items_per_second=948.713k/s
+BM_Reader_BufferSized_EndToEnd<1024>/10000                         62617055 ns     62539282 ns           11   bytes_per_second=21.0439Mi/s  items_per_second=959.381k/s
+BM_Reader_BufferSized_EndToEnd<2048>/100                             624270 ns       623758 ns         1093   bytes_per_second=21.0991Mi/s  items_per_second=960.309k/s
+BM_Reader_BufferSized_EndToEnd<2048>/1000                           6226889 ns      6222474 ns          110   bytes_per_second=21.1503Mi/s  items_per_second=964.086k/s
+BM_Reader_BufferSized_EndToEnd<2048>/10000                         61955171 ns     61857345 ns           11   bytes_per_second=21.2759Mi/s  items_per_second=969.958k/s
+BM_Reader_BufferSized_EndToEnd<4096>/100                             623886 ns       623059 ns         1112   bytes_per_second=21.1227Mi/s  items_per_second=961.386k/s
+BM_Reader_BufferSized_EndToEnd<4096>/1000                           6237737 ns      6223775 ns          109   bytes_per_second=21.1459Mi/s  items_per_second=963.884k/s
+BM_Reader_BufferSized_EndToEnd<4096>/10000                         61930665 ns     61912700 ns           11   bytes_per_second=21.2569Mi/s  items_per_second=969.09k/s
+BM_Reader_BufferSized_EndToEnd<65536>/100                            637067 ns       637105 ns         1098   bytes_per_second=20.657Mi/s   items_per_second=940.191k/s
+BM_Reader_BufferSized_EndToEnd<65536>/1000                          6245788 ns      6236082 ns          109   bytes_per_second=21.1041Mi/s  items_per_second=961.982k/s
+BM_Reader_BufferSized_EndToEnd<65536>/10000                        63260847 ns     63288645 ns           11   bytes_per_second=20.7947Mi/s  items_per_second=948.022k/s
+BM_Reader_BufferSized_EndToEnd<64>/100/iterations:50                 684463 ns       684940 ns           50   bytes_per_second=19.2144Mi/s  items_per_second=874.529k/s
+BM_Reader_BufferSized_EndToEnd<256>/100/iterations:50                640369 ns       640826 ns           50   bytes_per_second=20.5371Mi/s  items_per_second=934.731k/s
+BM_Reader_BufferSized_EndToEnd<1024>/100/iterations:50               650686 ns       651230 ns           50   bytes_per_second=20.209Mi/s   items_per_second=919.798k/s
+BM_Reader_BufferSized_EndToEnd<2048>/100/iterations:50               643245 ns       643684 ns           50   bytes_per_second=20.4459Mi/s  items_per_second=930.581k/s
+BM_Reader_BufferSized_EndToEnd<4096>/100/iterations:50               633670 ns       634154 ns           50   bytes_per_second=20.7532Mi/s  items_per_second=944.566k/s
+BM_Reader_BufferSized_EndToEnd<65536>/100/iterations:50              647576 ns       648056 ns           50   bytes_per_second=20.308Mi/s   items_per_second=924.303k/s
+BM_Reader_BufferSized_EndToEnd<64>/1000/iterations:50               6680978 ns      6685244 ns           50   bytes_per_second=19.6862Mi/s  items_per_second=897.349k/s
+BM_Reader_BufferSized_EndToEnd<256>/1000/iterations:50              6371853 ns      6376022 ns           50   bytes_per_second=20.6409Mi/s  items_per_second=940.869k/s
+BM_Reader_BufferSized_EndToEnd<1024>/1000/iterations:50             6414567 ns      6420156 ns           50   bytes_per_second=20.499Mi/s   items_per_second=934.401k/s
+BM_Reader_BufferSized_EndToEnd<2048>/1000/iterations:50             6325942 ns      6298628 ns           50   bytes_per_second=20.8946Mi/s  items_per_second=952.43k/s
+BM_Reader_BufferSized_EndToEnd<4096>/1000/iterations:50             6296813 ns      6302304 ns           50   bytes_per_second=20.8824Mi/s  items_per_second=951.874k/s
+BM_Reader_BufferSized_EndToEnd<65536>/1000/iterations:50            6333703 ns      6340530 ns           50   bytes_per_second=20.7565Mi/s  items_per_second=946.135k/s
+BM_Reader_BufferSized_EndToEnd<64>/10000/iterations:50             66233801 ns     66337664 ns           50   bytes_per_second=19.839Mi/s   items_per_second=904.448k/s
+BM_Reader_BufferSized_EndToEnd<256>/10000/iterations:50            63234566 ns     63428082 ns           50   bytes_per_second=20.749Mi/s   items_per_second=945.937k/s
+BM_Reader_BufferSized_EndToEnd<1024>/10000/iterations:50           65163044 ns     65367056 ns           50   bytes_per_second=20.1335Mi/s  items_per_second=917.878k/s
+BM_Reader_BufferSized_EndToEnd<2048>/10000/iterations:50           62827465 ns     62935332 ns           50   bytes_per_second=20.9115Mi/s  items_per_second=953.344k/s
+BM_Reader_BufferSized_EndToEnd<4096>/10000/iterations:50           63179781 ns     63286986 ns           50   bytes_per_second=20.7953Mi/s  items_per_second=948.046k/s
+BM_Reader_BufferSized_EndToEnd<65536>/10000/iterations:50          63190286 ns     63009562 ns           50   bytes_per_second=20.8868Mi/s  items_per_second=952.221k/s
+
+BuffersComparisonSimpleDataFixture/StreamBuffer_Simple/100          1737758 ns       733874 ns          959   bytes_per_second=17.9332Mi/s  items_per_second=816.217k/s
+BuffersComparisonSimpleDataFixture/MappedBuffer_Simple/100          1711249 ns       696474 ns         1011   bytes_per_second=18.8962Mi/s  items_per_second=860.046k/s
+BuffersComparisonSimpleDataFixture/StreamBuffer_Simple/1000        10032315 ns      6646688 ns          105   bytes_per_second=19.8004Mi/s  items_per_second=902.555k/s
+BuffersComparisonSimpleDataFixture/MappedBuffer_Simple/1000        10247285 ns      6170273 ns          113   bytes_per_second=21.3292Mi/s  items_per_second=972.242k/s
+BuffersComparisonSimpleDataFixture/StreamBuffer_Simple/10000       94710772 ns     66500710 ns           10   bytes_per_second=19.7903Mi/s  items_per_second=902.231k/s
+BuffersComparisonSimpleDataFixture/MappedBuffer_Simple/10000       92347613 ns     61622964 ns           11   bytes_per_second=21.3568Mi/s  items_per_second=973.647k/s
+BuffersComparisonSimpleDataFixture/StreamBuffer_Simple/1000000   9579543235 ns   6607561000 ns            1   bytes_per_second=19.9176Mi/s  items_per_second=908.05k/s
+BuffersComparisonSimpleDataFixture/MappedBuffer_Simple/1000000   8879098141 ns   6041403800 ns            1   bytes_per_second=21.7842Mi/s  items_per_second=993.146k/s
+BuffersComparisonQuotedDataFixture/StreamBuffer_Quoted/100          1437042 ns       532376 ns         1314   bytes_per_second=31.707Mi/s   items_per_second=561.633k/s
+BuffersComparisonQuotedDataFixture/MappedBuffer_Quoted/100          1589199 ns       500478 ns         1407   bytes_per_second=33.7278Mi/s  items_per_second=597.429k/s
+BuffersComparisonQuotedDataFixture/StreamBuffer_Quoted/1000         7682692 ns      4747554 ns          147   bytes_per_second=35.5552Mi/s  items_per_second=631.694k/s
+BuffersComparisonQuotedDataFixture/MappedBuffer_Quoted/1000         8445082 ns      4267870 ns          164   bytes_per_second=39.5514Mi/s  items_per_second=702.692k/s
+BuffersComparisonQuotedDataFixture/StreamBuffer_Quoted/10000       68235438 ns     47068607 ns           15   bytes_per_second=35.8626Mi/s  items_per_second=637.346k/s
+BuffersComparisonQuotedDataFixture/MappedBuffer_Quoted/10000       76041008 ns     42329553 ns           17   bytes_per_second=39.8777Mi/s  items_per_second=708.701k/s
+BuffersComparisonQuotedDataFixture/StreamBuffer_Quoted/1000000   7013641018 ns   4695359900 ns            1   bytes_per_second=35.9505Mi/s  items_per_second=638.928k/s
+BuffersComparisonQuotedDataFixture/MappedBuffer_Quoted/1000000   7742541476 ns   4239692600 ns            1   bytes_per_second=39.8143Mi/s  items_per_second=707.598k/s
 ```
 
 <details>
