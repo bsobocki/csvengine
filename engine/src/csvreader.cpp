@@ -2,6 +2,7 @@
 #include <csvparser.hpp>
 #include <csverrors.hpp>
 #include <csvbuffer/csvstreambuffer.hpp>
+#include <csvbuffer/csvmappedbuffer.hpp>
 #include <optional>
 #include <format>
 
@@ -11,10 +12,10 @@ namespace csv {
 
 Reader::Reader(const std::string& filepath, const Config& config)
     : csv_file_path_(filepath)
-    , buffer_(make_stream_buffer(filepath))
     , config_(config)
     , parser_(make_parser(config))
 {
+    create_buffer(filepath);
     init();
 }
 
@@ -66,6 +67,15 @@ void Reader::read_headers() {
 
     current_record_ = Record();
     line_number_ = 0;
+}
+
+void Reader::create_buffer(const std::string& filepath) {
+    if (!config_.streamming || config_.mapped_buffer) {
+        buffer_ = make_mapped_buffer(filepath);
+    }
+    else {
+        buffer_ = make_stream_buffer(filepath);
+    }
 }
 
 bool Reader::next() {
