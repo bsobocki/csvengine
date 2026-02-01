@@ -7,6 +7,9 @@ struct Config {
     bool has_header = true;
     bool has_quoting = true;
     char quote_char = '\"';
+    
+    bool streamming = true;
+    bool mapped_buffer = false;
 
     enum class ParseMode { strict, lenient };
     ParseMode parse_mode = ParseMode::strict;
