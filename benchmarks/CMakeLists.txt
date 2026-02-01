@@ -2,7 +2,7 @@ add_executable(run_benchmarks
   src/helpers.cpp
   src/parser_benchmark.cpp
   src/reader_benchmark.cpp
-  src/buffer_benchmark.cpp
+  src/streambuffer_benchmark.cpp
 )
 
 target_link_libraries(run_benchmarks
