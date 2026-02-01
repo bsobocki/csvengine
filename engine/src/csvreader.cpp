@@ -70,7 +70,7 @@ void Reader::read_headers() {
 }
 
 void Reader::create_buffer(const std::string& filepath) {
-    if (!config_.streamming || config_.mapped_buffer) {
+    if (config_.mapped_buffer) {
         buffer_ = make_mapped_buffer(filepath);
     }
     else {
