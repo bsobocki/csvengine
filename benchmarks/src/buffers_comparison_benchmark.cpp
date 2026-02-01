@@ -39,7 +39,7 @@ public:
     }
 
     void benchmark_body(benchmark::State& state, Config cfg) {
-        cfg.streamming = true;
+        cfg.streaming = true;
         cfg.has_header = true;
         cfg.has_quoting = true;
         cfg.parse_mode = Config::ParseMode::strict;
