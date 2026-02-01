@@ -10,11 +10,10 @@
 
 namespace csv {
 
-constexpr int64_t small_data  = 50;
+constexpr int64_t small_data  = 100;
 constexpr int64_t medium_data = 1000;
 constexpr int64_t big_data    = 10000;
-constexpr int64_t huge_data   = 500000;
-const std::string& temp_filename = "tmp_data.csv";
+constexpr int64_t huge_data   = 1000000;
 
 class BuffersComparisonFixture : public benchmark::Fixture {
 public:
@@ -75,8 +74,6 @@ public:
     BuffersComparisonQuotedDataFixture() : BuffersComparisonFixture(quoted_csv_data){}
 };
 
-
-
 BENCHMARK_DEFINE_F(BuffersComparisonSimpleDataFixture, StreamBuffer_Simple)(benchmark::State& state) {
     Config cfg {
         .mapped_buffer = false,
@@ -110,22 +107,19 @@ BENCHMARK_DEFINE_F(BuffersComparisonQuotedDataFixture, MappedBuffer_Quoted)(benc
 
 BENCHMARK_REGISTER_F(BuffersComparisonSimpleDataFixture, StreamBuffer_Simple)->Arg(small_data);
 BENCHMARK_REGISTER_F(BuffersComparisonSimpleDataFixture, MappedBuffer_Simple)->Arg(small_data);
-BENCHMARK_REGISTER_F(BuffersComparisonQuotedDataFixture, StreamBuffer_Quoted)->Arg(small_data);
-BENCHMARK_REGISTER_F(BuffersComparisonQuotedDataFixture, MappedBuffer_Quoted)->Arg(small_data);
-
 BENCHMARK_REGISTER_F(BuffersComparisonSimpleDataFixture, StreamBuffer_Simple)->Arg(medium_data);
 BENCHMARK_REGISTER_F(BuffersComparisonSimpleDataFixture, MappedBuffer_Simple)->Arg(medium_data);
-BENCHMARK_REGISTER_F(BuffersComparisonQuotedDataFixture, StreamBuffer_Quoted)->Arg(medium_data);
-BENCHMARK_REGISTER_F(BuffersComparisonQuotedDataFixture, MappedBuffer_Quoted)->Arg(medium_data);
-
 BENCHMARK_REGISTER_F(BuffersComparisonSimpleDataFixture, StreamBuffer_Simple)->Arg(big_data);
 BENCHMARK_REGISTER_F(BuffersComparisonSimpleDataFixture, MappedBuffer_Simple)->Arg(big_data);
-BENCHMARK_REGISTER_F(BuffersComparisonQuotedDataFixture, StreamBuffer_Quoted)->Arg(big_data);
-BENCHMARK_REGISTER_F(BuffersComparisonQuotedDataFixture, MappedBuffer_Quoted)->Arg(big_data);
-
 BENCHMARK_REGISTER_F(BuffersComparisonSimpleDataFixture, StreamBuffer_Simple)->Arg(huge_data);
 BENCHMARK_REGISTER_F(BuffersComparisonSimpleDataFixture, MappedBuffer_Simple)->Arg(huge_data);
+
+BENCHMARK_REGISTER_F(BuffersComparisonQuotedDataFixture, StreamBuffer_Quoted)->Arg(small_data);
+BENCHMARK_REGISTER_F(BuffersComparisonQuotedDataFixture, MappedBuffer_Quoted)->Arg(small_data);
+BENCHMARK_REGISTER_F(BuffersComparisonQuotedDataFixture, StreamBuffer_Quoted)->Arg(medium_data);
+BENCHMARK_REGISTER_F(BuffersComparisonQuotedDataFixture, MappedBuffer_Quoted)->Arg(medium_data);
+BENCHMARK_REGISTER_F(BuffersComparisonQuotedDataFixture, StreamBuffer_Quoted)->Arg(big_data);
+BENCHMARK_REGISTER_F(BuffersComparisonQuotedDataFixture, MappedBuffer_Quoted)->Arg(big_data);
 BENCHMARK_REGISTER_F(BuffersComparisonQuotedDataFixture, StreamBuffer_Quoted)->Arg(huge_data);
 BENCHMARK_REGISTER_F(BuffersComparisonQuotedDataFixture, MappedBuffer_Quoted)->Arg(huge_data);
-
 }
