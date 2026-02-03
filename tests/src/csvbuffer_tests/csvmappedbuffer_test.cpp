@@ -133,7 +133,7 @@ TEST_F(MappedBufferTest, ThrowsOnMissingFile) {
 }
 
 TEST_F(MappedBufferTest, EmptyFileBehavior) {
-    create_temp_file("")
+    create_temp_file("");
     MappedBuffer buffer(temp_filename);
 
     EXPECT_FALSE(buffer.good());
