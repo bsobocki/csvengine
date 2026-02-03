@@ -1233,6 +1233,43 @@ std::string_view entire_file(static_cast<char*>(mapped), file_size);
 - Requires different error handling (SIGBUS on I/O errors)
 - Not portable to non-POSIX systems without abstraction layer
 
+---
+
+## 5.5 Zero-Copy Data Architecture (RecordView)
+
+### 5.5.1 The Concept
+To achieve maximum throughput, the engine introduces `csv::RecordView`. Unlike the standard `Record` (which owns `std::vector<std::string>`), `RecordView` holds `std::vector<std::string_view>`. These views point directly into the internal `Buffer`, avoiding memory allocation and copying for the payload data.
+
+### 5.5.2 Split Record Handling (Compaction Protocol)
+Since `std::string_view` requires contiguous memory, records straddling two buffer chunks pose a challenge. This is resolved using the **Buffer Compaction** strategy (defined in 5.4.3) combined with a parser "shift" logic.
+
+*Note: This complexity applies only to `StreamBuffer`. In `MappedBuffer`, the entire file is virtually contiguous in memory, so splitting does not occur.*
+
+**The Protocol:**
+1.  **Parsing:** The Parser consumes data from `Buffer`. It returns field views pointing to the buffer's memory.
+2.  **Split Detection:** If the Parser hits the end of the buffer while inside a record (quoted field or unfinished line), it returns `ParseStatus::need_more_data`.
+3.  **Compaction:** Since the data in the buffer is incomplete, the Reader does **not** call `buffer->consume()`. Instead, it invokes `buffer->refill()`.
+    *   `refill()` internally calls `compact()`, which `memmove`s the unconsumed "tail" of the split record to the beginning of the buffer (index 0).
+    *   It then fills the remainder of the buffer starting immediately after the moved tail.
+4.  **Index Adjustment:** Since the data physically moved in memory, the Parser is notified to re-base its internal state (partial field indices) relative to the new buffer start (index 0).
+5.  **Continuation:** Parsing resumes. The record is now physically contiguous at the start of the buffer, allowing valid `string_view` creation.
+
+### 5.5.3 Memory Safety Contract (API Constraints)
+Due to the compaction mechanism, `RecordView` introduces a strict lifetime contract similar to STL iterator invalidation rules:
+
+> **The `RecordView` (and all its `string_view`s) is valid ONLY until the next call to `Reader::next()`.**
+
+Calling `next()` triggers potential compaction/refill, which overwrites the underlying memory. Users requiring data persistence across iterations must explicitly convert `RecordView` to `Record` (deep copy).
+
+### 5.5.4 Handling Giant Records (Edge Case)
+A physical limitation of this Zero-Copy architecture is when a single record exceeds the total `Buffer` capacity.
+
+**Constraint:**
+If `compact()` is called, and the split record tail occupies the *entire* buffer (meaning `Record Size > Buffer Capacity`), the engine cannot proceed in Zero-Copy mode.
+
+**Policy:**
+*   **v1.0:** Throw `RecordTooLargeError`. The user is advised to increase buffer size via Config or use the ownership-based `Record` API which supports stitching via heap allocation.
+*   **v1.1 (Planned):** Fallback to dynamic allocation (Heap Spillover) for these specific rows, temporarily sacrificing Zero-Copy for correctness.
 
 ---
 
