@@ -325,6 +325,13 @@ If you want to have detailed result summary in JSON or CSV formats you can just 
 ./go.sh benchmarks json
 ```
 
+If you want to run a specific benchmark:
+```bash
+./go.sh run_benchmarks ParserComparison
+# or with format
+./go.sh run_benchmarks ParserComparison csv
+```
+
 ## Project Structure
 
 ```text
