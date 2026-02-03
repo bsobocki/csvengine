@@ -417,7 +417,7 @@ csvengine/
 - [x] Performance benchmarks
 
 ### Version 1.1 (Planned)
-- [ ] Memory-mapped file I/O for improved performance
+- [x] Memory-mapped file I/O for improved performance
 - [ ] Schema validation with custom rules
 - [ ] Column-wise iteration
 - [ ] Statistics during parsing (min/max/count)
