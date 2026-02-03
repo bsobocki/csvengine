@@ -338,34 +338,47 @@ csvengine/
 │
 ├── engine/                     # Core library
 │   ├── CMakeLists.txt
+|   |
 │   ├── inc/                    # Public headers
+│   │   ├── csvbuffer/
+│   │   │   ├── csvbuffer.hpp         # I/O Buffer interface declaration
+│   │   │   ├── csvmappedbuffer.hpp   # Buffer as mapped file
+│   │   │   └── csvstreambuffer.hpp   # Chunk based buffer
+│   │   │
 │   │   ├── csvengine.hpp       # Main include
 │   │   ├── csvreader.hpp       # Reader class
 │   │   ├── csvrecord.hpp       # Record class
 │   │   ├── csvconfig.hpp       # Configuration
-│   │   ├── csvbuffer.hpp       # I/O buffering
 │   │   ├── csvparser.hpp       # Parser interface
 │   │   └── csverrors.hpp       # Exception types
+│   │
 │   └── src/                    # Implementation
 │       ├── csvreader.cpp
 │       ├── csvparser.cpp
+│       ├── csvmappedbuffer.cpp
 │       ├── csvparser_simple_parser.cpp
 │       ├── csvparser_quoting_strict_parser.cpp
 │       └── csvparser_quoting_lenient_parser.cpp
 │
-├── demo/                       # Example application
-│   ├── CMakeLists.txt
-│   └── main.cpp
-│
 ├── tests/                      # Unit tests
 │   ├── CMakeLists.txt
+|   |
 │   ├── src/
+|   |   ├── csvbuffer_tests/
+|   |   |   ├── csvmappedbuffer_test.cpp
+|   |   |   └── csvstreambuffer_test.cpp
+|   |   |
+│   │   ├── csvparser_tests/
+|   |   |   ├── csvparser_simple_test.cpp
+|   |   |   ├── csvparser_quoting_strict_test.cpp
+|   |   |   └── csvparser_quoting_lenient_test.cpp
+|   |   |
 │   │   ├── csvreader_test.cpp
-│   │   ├── csvbuffer_test.cpp
-│   │   ├── csvrecord_test.cpp
-│   │   └── csvparser_tests/
+│   │   └── csvrecord_test.cpp
+|   |
 │   ├── mocks/
 │   │   └── csvbuffer_mock.hpp
+|   |
 │   └── test_data/
 │       ├── simple_file.csv
 │       ├── quoting.csv
@@ -373,11 +386,20 @@ csvengine/
 │
 ├── benchmarks/                 # Performance benchmarks
 │   ├── CMakeLists.txt
+|   |
 │   ├── inc/
+│   |   └── helpers.hpp         # helper functions definitions
+|   | 
 │   └── src/
+│       ├── helpers.cpp
+│       ├── buffers_comparison_benchmark.cpp
 │       ├── parser_benchmark.cpp
 │       ├── reader_benchmark.cpp
-│       └── buffer_benchmark.cpp
+│       └── streambuffer_benchmark.cpp
+│
+├── demo/                       # Example application
+│   ├── CMakeLists.txt
+│   └── main.cpp
 │
 └── docs/                       # Documentation assets
     └── logo.png
