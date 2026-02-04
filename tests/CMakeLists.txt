@@ -2,6 +2,7 @@
 add_executable(run_tests
   src/csvreader_test.cpp
   src/csvrecord_test.cpp
+  src/csvrecordview_test.cpp
   src/csvparser_tests/csvparser_quoting_lenient_test.cpp
   src/csvparser_tests/csvparser_quoting_strict_test.cpp
   src/csvparser_tests/csvparser_simple_test.cpp
