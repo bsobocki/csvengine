@@ -9,7 +9,7 @@
 #include <functional>
 
 #include <csvconfig.hpp>
-#include <csvrecord.hpp>
+#include <csvrecord/csvrecord.hpp>
 #include <csvbuffer/csvbuffer.hpp>
 #include <csvparser.hpp>
 
