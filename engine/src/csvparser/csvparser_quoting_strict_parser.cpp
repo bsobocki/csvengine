@@ -46,7 +46,7 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
                 if (it != end_it && is_quote(*it) && is_quote(*(it-1))) it++;
             }
         }
-        
+
         current_field_quote_literals = 0;
         incomplete_last_read_ = false;
     };
