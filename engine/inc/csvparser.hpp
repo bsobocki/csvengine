@@ -23,6 +23,7 @@ public:
     [[nodiscard]] std::string_view err_msg() const noexcept;
     std::vector<std::string> move_fields() noexcept;
     const std::vector<std::string>& peek_fields() const noexcept;
+    const std::vector<std::string_view> fields_view() const noexcept;
 
     virtual void reset() noexcept;
 

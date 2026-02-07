@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstring>
 #include <csvparser.hpp>
+#include <algorithm>
 
 namespace csv {
 
@@ -52,6 +53,14 @@ std::vector<std::string> Parser::move_fields() noexcept {
 
 const std::vector<std::string>& Parser::peek_fields() const noexcept {
     return fields_;
+}
+
+const std::vector<std::string_view> Parser::fields_view() const noexcept {
+    std::vector<std::string_view> view(fields_.size());
+    std::transform(fields_.begin(), fields_.end(), view.begin(), [](const std::string& field) {
+        return std::string_view(field);
+    });
+    return view;
 }
 
 
