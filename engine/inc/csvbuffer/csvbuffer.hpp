@@ -25,6 +25,7 @@ public:
     virtual std::string_view view() const = 0;
     virtual void consume(size_t bytes) = 0;
     virtual size_t available() const = 0;
+    virtual size_t capacity() const = 0;
     virtual bool empty() const = 0;
     virtual bool eof() const = 0;
     virtual bool good() const = 0;

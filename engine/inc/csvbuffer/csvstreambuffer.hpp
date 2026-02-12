@@ -74,6 +74,10 @@ class StreamBuffer : public IBuffer {
             return size_ - start_;
         }
 
+        size_t capacity() const noexcept override {
+            return N;
+        }
+
         bool empty() const noexcept override {
             return start_ == size_;
         }

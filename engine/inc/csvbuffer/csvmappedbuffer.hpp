@@ -22,6 +22,7 @@ class MappedBuffer : public IBuffer {
         std::string_view view() const noexcept override;
         void consume(size_t bytes) noexcept override;
         size_t available() const noexcept override;
+        size_t capacity() const noexcept override;
         bool empty() const noexcept override;
         bool eof() const noexcept override;
         bool good() const noexcept override;

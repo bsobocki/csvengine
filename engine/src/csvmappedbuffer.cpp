@@ -93,6 +93,10 @@ size_t MappedBuffer::available() const noexcept {
     return size_ - start_;
 }
 
+size_t MappedBuffer::capacity() const noexcept {
+    return size_;
+}
+
 bool MappedBuffer::empty() const noexcept {
     return start_ >= size_;
 }
