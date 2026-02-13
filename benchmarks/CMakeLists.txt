@@ -4,6 +4,7 @@ add_executable(run_benchmarks
   src/reader_benchmark.cpp
   src/streambuffer_benchmark.cpp
   src/buffers_comparison_benchmark.cpp
+  src/record_vs_recordview_benchmark.cpp
 )
 
 target_link_libraries(run_benchmarks
