@@ -77,3 +77,17 @@ TEST_F(ReaderRecordViewTest, FieldsAreContiguousInMemory) {
 
     EXPECT_EQ(ptr1 + 3, ptr2);
 }
+
+TEST_F(ReaderRecordViewTest, HeadersAreSaved_NextFieldsAreCorrectlyRead) {
+    auto reader = createReader<100>("AA,BB\n12,34\n56,78\n", {.has_header = true});
+    EXPECT_TRUE(reader.has_header());
+    EXPECT_EQ(reader.headers(), std::vector<std::string>({"AA", "BB"}));
+
+    ASSERT_TRUE(reader.next());
+    EXPECT_EQ(reader.current_record().fields(), std::vector<std::string_view>({"12", "34"}));
+    EXPECT_EQ(reader.headers(), std::vector<std::string>({"AA", "BB"}));
+
+    ASSERT_TRUE(reader.next());
+    EXPECT_EQ(reader.current_record().fields(), std::vector<std::string_view>({"56", "78"}));
+    EXPECT_EQ(reader.headers(), std::vector<std::string>({"AA", "BB"}));
+}
