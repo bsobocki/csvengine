@@ -5,6 +5,7 @@ using namespace std;
 using namespace csv;
 
 using str_view_vec = std::vector<std::string_view>;
+using str_vec = std::vector<std::string>;
 
 TEST(RecordViewTest, CreateEmptyRecordView_NoThrow) {
     EXPECT_NO_THROW(RecordView RecordView);
@@ -77,7 +78,7 @@ TEST(RecordViewTest, NormalRecordView_GetValues_InvalidValuesAsArithmeticsButVal
 TEST(RecordViewTest, NormalRecordView_GetValues_ColumnNameAccess) {
     RecordView RecordView(
         str_view_vec{"Bożydar", "21", "2456.78"},
-        str_view_vec{"name", "age", "salary"}
+        str_vec{"name", "age", "salary"}
     );
     EXPECT_EQ(RecordView.get("name"), "Bożydar");
     EXPECT_EQ(RecordView.get<int>("age"), 21);
@@ -87,7 +88,7 @@ TEST(RecordViewTest, NormalRecordView_GetValues_ColumnNameAccess) {
 TEST(RecordViewTest, NormalRecordView_GetValues_NulloptOnWrongColumnName) {
     RecordView RecordView(
         str_view_vec{"Bożydar", "21", "2456.78"},
-        str_view_vec{"name", "age", "salary"}
+        str_vec{"name", "age", "salary"}
     );
     EXPECT_EQ(RecordView.get(""), std::nullopt);
     EXPECT_EQ(RecordView.get<int>("ages"), std::nullopt);
@@ -107,7 +108,7 @@ TEST(RecordViewTest, NormalRecordView_SubscriptOperator_ValidAsString) {
 TEST(RecordViewTest, NormalRecordView_SubscriptOperator_ColumnNameAccess) {
     RecordView RecordView(
         str_view_vec{"Bożydar", "21", "Poland"},
-        str_view_vec{"name", "age", "country"}
+        str_vec{"name", "age", "country"}
     );
     EXPECT_EQ(RecordView[0], RecordView["name"]);
     EXPECT_EQ(RecordView["name"], "Bożydar");
@@ -120,7 +121,7 @@ TEST(RecordViewTest, NormalRecordView_SubscriptOperator_ColumnNameAccess) {
 TEST(RecordViewTest, NormalRecordView_SubscriptOperator_ThrowOnWrongColumnName) {
     RecordView RecordView(
         str_view_vec{"Bożydar", "21", "Poland"},
-        str_view_vec{"name", "age", "country"}
+        str_vec{"name", "age", "country"}
     );
     EXPECT_THROW(RecordView[""], RecordColumnNameError);
     EXPECT_THROW(RecordView["ages"], RecordColumnNameError);

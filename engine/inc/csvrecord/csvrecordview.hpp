@@ -20,10 +20,10 @@ public:
     RecordView& operator=(const RecordView&) = default;
     RecordView& operator=(RecordView&&) noexcept = default;
 
-    explicit RecordView(const std::vector<std::string_view>& fields, const std::vector<std::string_view>& headers = {})
+    explicit RecordView(const std::vector<std::string_view>& fields, const std::vector<std::string>& headers = {})
         :fields_(fields), headers_(headers) {}
 
-    explicit RecordView(std::vector<std::string_view>&& fields, std::vector<std::string_view>&& headers = {})
+    explicit RecordView(std::vector<std::string_view>&& fields, std::vector<std::string>&& headers = {})
         :fields_(std::move(fields)), headers_(std::move(headers)) {}
 
     explicit RecordView(const std::vector<std::string>& fields, const std::vector<std::string>& headers = {})
@@ -78,7 +78,7 @@ public:
         return fields_;
     }
 
-    const std::vector<std::string_view>& headers() const noexcept {
+    const std::vector<std::string>& headers() const noexcept {
         return headers_;
     }
 
@@ -147,7 +147,7 @@ private:
     }
 
     std::vector<std::string_view> fields_;
-    std::vector<std::string_view> headers_;
+    std::vector<std::string> headers_;
 };
 
 }
