@@ -247,11 +247,24 @@ Newly added benchmarks `benchmarks/src/buffers_comparison_benchmark.cpp` shows t
 | **Huge (132 MB)** | Simple Data | 908k rows/s | **993k rows/s** | **+9.3%** |
 | **Huge (170 MB)** | Quoted Data | 638k rows/s | **707k rows/s** | **+10.8%** |
 
+## Comparison Record vs RecordView
+
+Newly added benchmarks `benchmarks/src/record_vs_recordview_benchmark.cpp` show that using `RecordView` instead of `Record` increases performance by roughly **~2x**, because we avoid copying data — fields are returned as `std::string_view` pointing directly into the parse buffer.
+
+#### Throughput Improvement (Higher is Better)
+| Dataset Size | Record | RecordView | Improvement |
+| :--- | :--- | :--- | :--- |
+| **Small (0.0132 MB)** | 623k rows/s | **1.349M rows/s** | **~2.17x** |
+| **Medium (0.132 MB)** | 716k rows/s | **1.366M rows/s** | **~1.91x** |
+| **Big (1.32 MB)** | 718k rows/s | **1.378M rows/s** | **~1.92x** |
+
 #### Efficiency (CPU Time) (Lower is Better)
-*For Huge Simple Data:*
-*   **StreamBuffer:** 6.61s CPU time
-*   **MappedBuffer:** 6.04s CPU time
-*   **Result:** `MappedBuffer` does the same work using **~9.4% less CPU**, freeing up the processor for other threads.
+*For Big Simple Data (1.32 MB, 60K rows):*
+*   **Record:** 83.5ms CPU time
+*   **RecordView:** 43.5ms CPU time
+*   **Result:** `RecordView` does the same work using **~48% less CPU
+    time**, freeing up the processor for other threads.
+
 
 ## Recommendations
 
@@ -361,6 +374,13 @@ BuffersComparisonQuotedDataFixture/StreamBuffer_Quoted/10000       68235438 ns  
 BuffersComparisonQuotedDataFixture/MappedBuffer_Quoted/10000       76041008 ns     42329553 ns           17   bytes_per_second=39.8777Mi/s  items_per_second=708.701k/s
 BuffersComparisonQuotedDataFixture/StreamBuffer_Quoted/1000000   7013641018 ns   4695359900 ns            1   bytes_per_second=35.9505Mi/s  items_per_second=638.928k/s
 BuffersComparisonQuotedDataFixture/MappedBuffer_Quoted/1000000   7742541476 ns   4239692600 ns            1   bytes_per_second=39.8143Mi/s  items_per_second=707.598k/s
+
+BM_RecordComparison_Record_SimpleParser/100/iterations:50            985575 ns       961864 ns           50   bytes_per_second=13.6825Mi/s items_per_second=622.749k/s
+BM_RecordComparison_RecordView_SimpleParser/100/iterations:50        452801 ns       443938 ns           50   bytes_per_second=29.6454Mi/s items_per_second=1.34929M/s
+BM_RecordComparison_Record_SimpleParser/1000/iterations:50          8551974 ns      8383284 ns           50   bytes_per_second=15.6987Mi/s items_per_second=715.591k/s
+BM_RecordComparison_RecordView_SimpleParser/1000/iterations:50      4480063 ns      4391690 ns           50   bytes_per_second=29.9673Mi/s items_per_second=1.36599M/s
+BM_RecordComparison_Record_SimpleParser/10000/iterations:50        85248120 ns     83534894 ns           50   bytes_per_second=15.7547Mi/s items_per_second=718.251k/s
+BM_RecordComparison_RecordView_SimpleParser/10000/iterations:50    44447092 ns     43544062 ns           50   bytes_per_second=30.2239Mi/s items_per_second=1.37789M/s
 ```
 
 <details>
