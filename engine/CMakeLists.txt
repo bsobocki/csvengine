@@ -5,9 +5,10 @@ add_library(csvengine
     src/csvparser/simple/csvparser_recordview_simple_parser.cpp
     src/csvparser/quoting/csvparser_quoting_strict_parser.cpp
     src/csvparser/quoting/csvparser_quoting_lenient_parser.cpp
-    src/csvreader.cpp
+    src/csvreader/csvreader.cpp
+    src/csvreader/csvreaderbase.cpp
+    src/csvreader/csvviewreader.cpp
     src/csvmappedbuffer.cpp
-    src/csvviewreader.cpp
 )
 
 # public headers for the 'csvengine' library are located in the 'inc' directory.
