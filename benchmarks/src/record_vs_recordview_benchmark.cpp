@@ -53,7 +53,7 @@ static void BM_RecordComparison_RecordView_SimpleParser(benchmark::State& state)
         .has_quoting = false,
         .line_ending = Config::LineEnding::lf,
     };
-    BM_RecordComparison_TestBody<ReaderRecordView>(state, cfg, simple_csv_data);
+    BM_RecordComparison_TestBody<ViewReader>(state, cfg, simple_csv_data);
 }
 
 BENCHMARK(BM_RecordComparison_Record_SimpleParser)->Arg(small_data)->Iterations(iterations);

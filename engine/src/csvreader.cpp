@@ -10,32 +10,51 @@ using namespace std;
 
 namespace csv {
 
-Reader::Reader(const std::string& filepath, const Config& config)
+template <typename RecordType>
+ReaderBase<RecordType>::ReaderBase(const std::string& filepath, const Config& config)
     : csv_file_path_(filepath)
     , config_(config)
-    , parser_(make_parser(config))
 {
     create_buffer(filepath);
+}
+
+template <typename RecordType>
+ReaderBase<RecordType>::ReaderBase(std::unique_ptr<std::istream> stream, const Config& config)
+    : buffer_(make_stream_buffer(std::move(stream)))
+    , config_(config)
+{
+}
+
+template <typename RecordType>
+ReaderBase<RecordType>::ReaderBase(std::unique_ptr<IBuffer> buffer, const Config& config)
+    : buffer_(std::move(buffer))
+    , config_(config)
+{
+}
+
+Reader::Reader(const std::string& filepath, const Config& config)
+    : ReaderBase<Record>(filepath, config)
+    , parser_(make_parser(config))
+{
     init();
 }
 
 Reader::Reader(std::unique_ptr<std::istream> stream, const Config& config)
-    : buffer_(make_stream_buffer(std::move(stream)))
-    , config_(config)
+    : ReaderBase<Record>(std::move(stream), config)
     , parser_(make_parser(config))
 {
     init();
 }
 
 Reader::Reader(std::unique_ptr<IBuffer> buffer, const Config& config)
-    : buffer_(std::move(buffer))
-    , config_(config)
+    : ReaderBase<Record>(std::move(buffer), config)
     , parser_(make_parser(config))
 {
     init();
 }
 
-void Reader::init() {
+template <typename RecordType>
+void ReaderBase<RecordType>::init() {
     validate_config();
 
     if (config_.record_size_policy == Config::RecordSizePolicy::strict_to_value) {
@@ -51,7 +70,8 @@ void Reader::init() {
     }
 }
 
-void Reader::read_headers() {
+template <typename RecordType>
+void ReaderBase<RecordType>::read_headers() {
     if (!next()) {
         throw FileHeaderError();
     }
@@ -65,11 +85,12 @@ void Reader::read_headers() {
         record_size_ = headers_.size();
     }
 
-    current_record_ = Record();
+    current_record_ = RecordType();
     line_number_ = 0;
 }
 
-void Reader::create_buffer(const std::string& filepath) {
+template <typename RecordType>
+void ReaderBase<RecordType>::create_buffer(const std::string& filepath) {
     if (config_.mapped_buffer) {
         buffer_ = make_mapped_buffer(filepath);
     }
@@ -134,67 +155,81 @@ bool Reader::next() {
     return false; // on ParseStatus::fail
 }
 
-Reader::Iterator::Iterator(Reader* reader): reader_(reader) {
+template <typename RecordType>
+ReaderBase<RecordType>::Iterator::Iterator(ReaderBase<RecordType>* reader): reader_(reader) {
     if (reader_ && reader_->line_number() == 0) {
         operator++();
     }
 }
 
-Reader::Iterator& Reader::Iterator::operator++() {
+template <typename RecordType>
+ReaderBase<RecordType>::Iterator& ReaderBase<RecordType>::Iterator::operator++() {
     if (reader_ && !reader_->next())
         reader_ = nullptr;
 
     return *this;
 }
 
-const Record& Reader::Iterator::operator*() const {
+template <typename RecordType>
+const RecordType& ReaderBase<RecordType>::Iterator::operator*() const {
     return reader_->current_record();
 }
 
-bool Reader::Iterator::operator!=(const Iterator& other) const {
+template <typename RecordType>
+bool ReaderBase<RecordType>::Iterator::operator!=(const Iterator& other) const {
     return this->reader_ != other.reader_;
 }
 
-Reader::Iterator Reader::begin() {
-    return Reader::Iterator(this);
+template <typename RecordType>
+ReaderBase<RecordType>::Iterator ReaderBase<RecordType>::begin() {
+    return ReaderBase<RecordType>::Iterator(this);
 }
 
-Reader::Iterator Reader::end() {
-    return Reader::Iterator(nullptr);
+template <typename RecordType>
+ReaderBase<RecordType>::Iterator ReaderBase<RecordType>::end() {
+    return ReaderBase<RecordType>::Iterator(nullptr);
 }
 
-bool Reader::good() const noexcept {
+template <typename RecordType>
+bool ReaderBase<RecordType>::good() const noexcept {
     return buffer_->good();
 }
 
-bool Reader::has_header() const noexcept {
+template <typename RecordType>
+bool ReaderBase<RecordType>::has_header() const noexcept {
     return config_.has_header;
 }
 
-std::size_t Reader::line_number() const noexcept {
+template <typename RecordType>
+std::size_t ReaderBase<RecordType>::line_number() const noexcept {
     return line_number_;
 }
 
-std::size_t Reader::record_size() const noexcept {
+template <typename RecordType>
+std::size_t ReaderBase<RecordType>::record_size() const noexcept {
     return record_size_;
 }
 
-size_t Reader::expected_record_size(size_t record_size) const noexcept {
+template <typename RecordType>
+size_t ReaderBase<RecordType>::expected_record_size(size_t record_size) const noexcept {
     if (config_.record_size_policy == Config::RecordSizePolicy::flexible) {
         return record_size;
     }
     return record_size_;
 }
 
-Reader::operator bool() const noexcept {
+template <typename RecordType>
+ReaderBase<RecordType>::operator bool() const noexcept {
     return good();
 }
 
-Config Reader::config() const noexcept {
+template <typename RecordType>
+Config ReaderBase<RecordType>::config() const noexcept {
     return config_;
 }
 
-void Reader::validate_config() const {
+template <typename RecordType>
+void ReaderBase<RecordType>::validate_config() const {
     auto policy = config_.record_size_policy;
     if (policy == Config::RecordSizePolicy::strict_to_header && !config_.has_header) {
         throw ConfigError("strict_to_header requires has_header=true");
@@ -205,12 +240,16 @@ void Reader::validate_config() const {
     }
 }
 
-const Record& Reader::current_record() const noexcept {
+template <typename RecordType>
+const RecordType& ReaderBase<RecordType>::current_record() const noexcept {
     return current_record_;
 }
-    
-const std::vector<std::string>& Reader::headers() const noexcept {
+
+template <typename RecordType>
+const std::vector<std::string>& ReaderBase<RecordType>::headers() const noexcept {
     return headers_;
 }
 
+template class ReaderBase<Record>;
+template class ReaderBase<RecordView>;
 }
