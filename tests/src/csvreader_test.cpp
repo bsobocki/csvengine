@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <csvreader.hpp>
+#include <csvreader/csvreader.hpp>
 #include <csverrors.hpp>
 #include <testdata.hpp>
 

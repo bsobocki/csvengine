@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <csvreader.hpp>
+#include <csvreader/csvreader.hpp>
 #include <csvbuffer/csvstreambuffer.hpp>
 #include <sstream>
 

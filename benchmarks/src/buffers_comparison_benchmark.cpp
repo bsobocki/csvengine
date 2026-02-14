@@ -1,6 +1,6 @@
 #include <benchmark/benchmark.h>
 
-#include <csvreader.hpp>
+#include <csvreader/csvreader.hpp>
 #include <csvconfig.hpp>
 
 #include <testdata.hpp>

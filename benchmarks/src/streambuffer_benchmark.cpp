@@ -1,7 +1,7 @@
 #include<benchmark/benchmark.h>
 
 #include <csvbuffer/csvstreambuffer.hpp>
-#include <csvreader.hpp>
+#include <csvreader/csvreader.hpp>
 #include <csvconfig.hpp>
 
 #include <helpers.hpp>
