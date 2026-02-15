@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <csvparser.hpp>
+#include <csvparser/csvparser.hpp>
 #include <csvconfig.hpp>
 #include <testdata.hpp>
 

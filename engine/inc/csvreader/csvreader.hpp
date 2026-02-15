@@ -12,7 +12,7 @@
 #include <csvrecord/csvrecord.hpp>
 #include <csvrecord/csvrecordview.hpp>
 #include <csvbuffer/csvbuffer.hpp>
-#include <csvparser.hpp>
+#include <csvparser/csvparser.hpp>
 
 namespace csv {
 

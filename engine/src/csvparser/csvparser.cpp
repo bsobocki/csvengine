@@ -1,6 +1,6 @@
 #include <iostream>
 #include <cstring>
-#include <csvparser.hpp>
+#include <csvparser/csvparser.hpp>
 #include <algorithm>
 
 namespace csv {
