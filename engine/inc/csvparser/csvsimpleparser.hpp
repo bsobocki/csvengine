@@ -4,7 +4,18 @@
 
 namespace csv {
 
-class SimpleParser : public Parser {
+class SimpleParserBase : public Parser {
+protected:
+    explicit SimpleParserBase(const Config& config);
+
+    void insert_fields(const std::vector<std::string_view>& fields);
+    std::vector<std::string_view> split(std::string_view str, const char delim) const;
+
+    virtual void merge_incomplete_field(const std::string_view& field) = 0;
+    virtual void add_field(const std::string_view& field) = 0;
+};
+
+class SimpleParser : public SimpleParserBase {
 public:
     explicit SimpleParser(const Config& config);
 
@@ -12,12 +23,12 @@ public:
     [[nodiscard]] ParseStatus parse(std::string_view buffer) override;
 
 private:
-    void insert_fields(const std::vector<std::string_view>& fields);
-    std::vector<std::string_view> split(std::string_view str, const char delim) const;
+    void merge_incomplete_field(const std::string_view& field) override;
+    void add_field(const std::string_view& field) override;
 };
 
 
-class ViewSimpleParser : public Parser {
+class ViewSimpleParser : public SimpleParserBase {
 public:
     explicit ViewSimpleParser(const Config& config);
 
@@ -29,8 +40,8 @@ public:
     void reset() noexcept override;
 
 private:
-    void insert_fields(const std::vector<std::string_view>& fields);
-    std::vector<std::string_view> split(std::string_view str, const char delim) const;
+    void merge_incomplete_field(const std::string_view& field) override;
+    void add_field(const std::string_view& field) override;
 
     std::vector<std::string_view> fields_;
 };

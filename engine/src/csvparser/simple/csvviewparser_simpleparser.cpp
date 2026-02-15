@@ -4,24 +4,7 @@
 
 namespace csv {
 
-ViewSimpleParser::ViewSimpleParser(const Config& config): Parser(config) {}
-
-std::vector<std::string_view> ViewSimpleParser::split(std::string_view str, const char delim) const {
-    std::vector<std::string_view> result;
-    const char* str_end = str.data() + str.size();
-    const char* start = str.data();
-    const char* end = static_cast<const char*>(memchr(str.data(), delim, str.size()));
-
-    while(end) {
-        result.emplace_back(start, static_cast<size_t>(end - start));
-        start = end + 1;
-        end = static_cast<const char*>(memchr(start, delim, str_end - start));
-    }
-
-    result.emplace_back(start, static_cast<size_t>(str_end - start));
-
-    return result;
-}
+ViewSimpleParser::ViewSimpleParser(const Config& config): SimpleParserBase(config) {}
 
 // contract: after ParseStatus::need_more_data methods parse and inser_fields must be called after adjust_fields !
 ParseStatus ViewSimpleParser::parse(std::string_view buffer) {
@@ -71,16 +54,13 @@ ParseStatus ViewSimpleParser::parse(std::string_view buffer) {
 }
 
 // contract: after ParseStatus::need_more_data methods parse and inser_fields must be called after adjust_fields !
-void ViewSimpleParser::insert_fields(const std::vector<std::string_view>& fields) {
-    auto field = fields.begin();
-    if (incomplete_last_read_ && !fields_.empty() && field != fields.end()) {
-        auto new_size = fields_[fields_.size()-1].size() + (*field).size();
-        fields_.back() = std::string_view(fields_[fields_.size()-1].data(), new_size);
-        field++;
-    }
-    while(field != fields.end()) {
-        fields_.push_back(*field++);
-    }
+void ViewSimpleParser::merge_incomplete_field(const std::string_view& field) {
+    auto new_size = fields_.back().size() + field.size();
+    fields_.back() = std::string_view(fields_.back().data(), new_size);
+}
+
+void ViewSimpleParser::add_field(const std::string_view& field) {
+    fields_.push_back(field);
 }
 
 void ViewSimpleParser::shift_views(const char* new_buffer_start) {
