@@ -22,11 +22,8 @@ protected:
         auto mock_buffer = std::make_unique<MockBuffer>();
         MockBuffer* mock_buffer_ptr = mock_buffer.get();
 
-        // 1. Set default behavior that most tests will use
         ON_CALL(*mock_buffer_ptr, good()).WillByDefault(Return(true));
 
-        // 2. If the config says there's a header, we MUST set expectations 
-        // because the constructor will call read_headers() immediately.
         if (cfg.has_header) {
             EXPECT_CALL(*mock_buffer_ptr, empty()).WillOnce(Return(false));
             EXPECT_CALL(*mock_buffer_ptr, view()).WillOnce(Return(first_record));
@@ -91,7 +88,6 @@ TEST_F(ReaderTest, NextReturnsFalseWhenDataIsOnlyHeaders_CurrentRecordIsEmpty) {
 
     EXPECT_EQ(reader->headers(), std::vector<std::string>({"h1", "h2"}));
 
-    // Specific expectations for this test
     EXPECT_CALL(*mock, empty()).WillOnce(Return(true));
     EXPECT_CALL(*mock, refill()).WillOnce(Return(ReadingResult::eof));
 
@@ -103,7 +99,6 @@ TEST_F(ReaderTest, NextReturnsTrueWhenDataAvailable) {
     Config cfg{.has_header = false};
     auto [reader, mock] = setup_reader(cfg);
 
-    // Specific expectations for this test
     EXPECT_CALL(*mock, empty()).WillOnce(Return(false));
     EXPECT_CALL(*mock, view()).WillOnce(Return("val1,val2\n"));
     EXPECT_CALL(*mock, consume(_));

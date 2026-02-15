@@ -17,19 +17,16 @@ protected:
 };
 
 TEST_F(ViewReaderTest, ReadsSimpleDataCorrectly) {
-    // Buffer duży, Happy Path
     auto reader = createReader<1024>("col1,col2\nval1,val2\n");
     
-    // Header (czytany w init)
     auto headers = reader.headers();
     ASSERT_EQ(headers.size(), 2);
     EXPECT_EQ(headers[0], "col1");
     EXPECT_EQ(headers[1], "col2");
 
-    // Rekord 1
     ASSERT_TRUE(reader.next());
     auto rec = reader.current_record();
-    EXPECT_EQ(rec.size(), 2);       // Tu był błąd "Got 4"
+    EXPECT_EQ(rec.size(), 2);
     EXPECT_EQ(rec[0], "val1");
     EXPECT_EQ(rec[1], "val2");
     
@@ -50,7 +47,6 @@ TEST_F(ViewReaderTest, SplitRecord_FitsInBuffer_StitchingWorks) {
 }
 
 TEST_F(ViewReaderTest, NoNewlineAtEnd) {
-    // "a,b" -> bez \n
     auto reader = createReader<10>("a,b", {.has_header = false});
     ASSERT_TRUE(reader.next());
     EXPECT_EQ(reader.current_record()[0], "a");

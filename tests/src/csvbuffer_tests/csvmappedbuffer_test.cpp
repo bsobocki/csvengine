@@ -82,8 +82,7 @@ TEST_F(MappedBufferTest, MoveConstructorTransfersOwnership) {
 
         EXPECT_FALSE(source.good());
         EXPECT_EQ(source.view(), "");
-    } 
-    // If double-free existed, this closing brace would crash (Segfault)
+    }
 }
 
 TEST_F(MappedBufferTest, MoveAssignmentTransfersOwnership) {

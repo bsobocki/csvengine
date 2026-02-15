@@ -223,8 +223,6 @@ TEST(SimpleParserLineEndingTest, CRLF_PartialAcrossChunks_CRThenLF) {
     auto p = make_parser({.has_quoting = false, .line_ending = Config::LineEnding::crlf});
 
     EXPECT_EQ(p->parse("a,b\r"), ParseStatus::need_more_data);
-    // In your current parser, this will have inserted fields already and marked incomplete;
-    // final newline completes the record.
     EXPECT_EQ(p->parse("\n"), ParseStatus::complete);
 
     EXPECT_EQ(p->move_fields(), (std::vector<std::string>{"a","b"}));
@@ -238,13 +236,13 @@ TEST(SimpleParserLineEndingTest, CR_Mode_Parses_CR_Terminated_Line) {
     auto p = make_parser({.has_quoting = false, .line_ending = Config::LineEnding::cr});
     EXPECT_EQ(p->parse("a,b\rc,d\r"), ParseStatus::complete);
     EXPECT_EQ(p->peek_fields(), (std::vector<std::string>{"a","b"}));
-    EXPECT_EQ(p->consumed(), 4u); // "a,b\r" = 4
+    EXPECT_EQ(p->consumed(), 4u);
 }
 
 TEST(SimpleParserLineEndingTest, CR_Mode_DoesNotTreat_LF_AsTerminator) {
     auto p = make_parser({.has_quoting = false, .line_ending = Config::LineEnding::cr});
     EXPECT_EQ(p->parse("a,b\n"), ParseStatus::need_more_data);
-    EXPECT_EQ(p->consumed(), 4u); // your parser consumes whole buffer when no terminator found
+    EXPECT_EQ(p->consumed(), 4u);
     EXPECT_EQ(p->peek_fields(), (std::vector<std::string>{"a","b\n"}));
 }
 

@@ -288,18 +288,18 @@ TEST_F(StrictParserTest, Reset_ClearsFields) {
 }
 
 TEST_F(StrictParserTest, Reset_ClearsState) {
-    strict_parser->parse("\"hello");  // In quotes
+    strict_parser->parse("\"hello");
     strict_parser->reset();
-    // Should parse fresh, not continue quoted state
+
     EXPECT_EQ(strict_parser->parse("world\n"), ParseStatus::complete);
     EXPECT_EQ(strict_parser->move_fields(), std::vector<std::string>{"world"});
 }
 
 TEST_F(StrictParserTest, Reset_ClearsPendingQuote) {
-    strict_parser->parse("\"hello\"");  // Pending quote
+    strict_parser->parse("\"hello\"");
     strict_parser->reset();
-    EXPECT_EQ(strict_parser->parse("world\n"), ParseStatus::complete); // fails without reset
-    EXPECT_EQ(strict_parser->move_fields(), std::vector<std::string>{"world"}); // only data after reset
+    EXPECT_EQ(strict_parser->parse("world\n"), ParseStatus::complete);
+    EXPECT_EQ(strict_parser->move_fields(), std::vector<std::string>{"world"});
 }
 
 TEST_F(StrictParserTest, Reset_ClearsConsumed) {
@@ -447,7 +447,7 @@ TEST_F(StrictParserTest, CRLF_SplitAfterClosingQuote) {
 
 TEST_F(StrictParserTest, PendingCR_PopsWithoutChecks) {
     EXPECT_EQ(strict_parser_crlf->parse("a\r"), ParseStatus::need_more_data);
-    strict_parser_crlf->reset();  // pending_cr_ is false after reset()
+    strict_parser_crlf->reset();
     EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::fail);
 }
 
@@ -566,7 +566,7 @@ TEST_F(StrictParserTest, Strict_GarbageAfterDelimiterBeforeQuote_Fails) {
 
 TEST_F(StrictParserTest, LF_MultipleRecordsInOneBuffer_ConsumesOnlyFirst) {
     ExpectParse(strict_parser, "a,b\nc,d\n", ParseStatus::complete, {"a","b"});
-    EXPECT_EQ(strict_parser->consumed(), 4u); // "a,b\n"
+    EXPECT_EQ(strict_parser->consumed(), 4u);
 }
 
 TEST_F(StrictParserTest, CRLF_CRInsideQuotes_IsData) {
