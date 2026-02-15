@@ -12,21 +12,21 @@ namespace csv {
 
 ViewReader::ViewReader(const std::string& filepath, const Config& config)
     : ReaderBase<RecordView>(filepath, config)
-    , parser_(std::make_unique<SimpleParserRecordView>(config))
+    , parser_(std::make_unique<ViewSimpleParser>(config))
 {
     init();
 }
 
 ViewReader::ViewReader(std::unique_ptr<std::istream> stream, const Config& config)
     : ReaderBase<RecordView>(std::move(stream), config)
-    , parser_(std::make_unique<SimpleParserRecordView>(config))
+    , parser_(std::make_unique<ViewSimpleParser>(config))
 {
     init();
 }
 
 ViewReader::ViewReader(std::unique_ptr<IBuffer> buffer, const Config& config)
     : ReaderBase<RecordView>(std::move(buffer), config)
-    , parser_(std::make_unique<SimpleParserRecordView>(config))
+    , parser_(std::make_unique<ViewSimpleParser>(config))
 {
     init();
 }

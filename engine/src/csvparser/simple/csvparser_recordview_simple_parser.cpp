@@ -4,9 +4,9 @@
 
 namespace csv {
 
-SimpleParserRecordView::SimpleParserRecordView(const Config& config): Parser(config) {}
+ViewSimpleParser::ViewSimpleParser(const Config& config): Parser(config) {}
 
-std::vector<std::string_view> SimpleParserRecordView::split(std::string_view str, const char delim) const {
+std::vector<std::string_view> ViewSimpleParser::split(std::string_view str, const char delim) const {
     std::vector<std::string_view> result;
     const char* str_end = str.data() + str.size();
     const char* start = str.data();
@@ -24,7 +24,7 @@ std::vector<std::string_view> SimpleParserRecordView::split(std::string_view str
 }
 
 // contract: after ParseStatus::need_more_data methods parse and inser_fields must be called after adjust_fields !
-ParseStatus SimpleParserRecordView::parse(std::string_view buffer) {
+ParseStatus ViewSimpleParser::parse(std::string_view buffer) {
     consumed_ = 0;
 
     const char newline = config_.line_ending == Config::LineEnding::cr ? '\r' : '\n';
@@ -71,7 +71,7 @@ ParseStatus SimpleParserRecordView::parse(std::string_view buffer) {
 }
 
 // contract: after ParseStatus::need_more_data methods parse and inser_fields must be called after adjust_fields !
-void SimpleParserRecordView::insert_fields(const std::vector<std::string_view>& fields) {
+void ViewSimpleParser::insert_fields(const std::vector<std::string_view>& fields) {
     auto field = fields.begin();
     if (incomplete_last_read_ && !fields_.empty() && field != fields.end()) {
         auto new_size = fields_[fields_.size()-1].size() + (*field).size();
@@ -83,7 +83,7 @@ void SimpleParserRecordView::insert_fields(const std::vector<std::string_view>& 
     }
 }
 
-void SimpleParserRecordView::shift_views(const char* new_buffer_start) {
+void ViewSimpleParser::shift_views(const char* new_buffer_start) {
     if (fields_.empty()) return;
 
     auto old_fields_data_start = fields_[0].data();
@@ -94,11 +94,11 @@ void SimpleParserRecordView::shift_views(const char* new_buffer_start) {
     }
 }
 
-const std::vector<std::string_view>& SimpleParserRecordView::fields() const noexcept {
+const std::vector<std::string_view>& ViewSimpleParser::fields() const noexcept {
     return fields_;
 }
 
-void SimpleParserRecordView::reset() noexcept {
+void ViewSimpleParser::reset() noexcept {
     Parser::reset();
     fields_.clear();
 }

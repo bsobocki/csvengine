@@ -51,9 +51,9 @@ private:
     std::vector<std::string_view> split(std::string_view str, const char delim) const;
 };
 
-class SimpleParserRecordView : public Parser {
+class ViewSimpleParser : public Parser {
 public:
-    explicit SimpleParserRecordView(const Config& config);
+    explicit ViewSimpleParser(const Config& config);
 
     /// @brief function parse doesn't reset the parser state
     [[nodiscard]] ParseStatus parse(std::string_view buffer) override;

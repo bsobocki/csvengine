@@ -112,7 +112,7 @@ public:
     [[nodiscard]] bool next() override;
 
 private:
-    std::unique_ptr<SimpleParserRecordView> parser_;
+    std::unique_ptr<ViewSimpleParser> parser_;
 };
 
 }
