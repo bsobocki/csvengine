@@ -13,7 +13,7 @@ constexpr int64_t small_data  = 100;
 constexpr int64_t medium_data = 1000;
 constexpr int64_t big_data    = 10000;
 
-template<class ReaderType>
+template<typename ReaderType>
 static void BM_RecordComparison_TestBody(benchmark::State& state, Config& cfg, const std::string& data) {
     const int repeats = static_cast<int>(state.range(0));
     const std::string csv_text = repeat_csv(data, repeats);

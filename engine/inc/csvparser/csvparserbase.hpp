@@ -11,6 +11,7 @@ namespace csv {
 
 enum class ParseStatus {complete, need_more_data, fail};
 
+template <typename
 class Parser {
 public:
     explicit Parser(const Config& config);
