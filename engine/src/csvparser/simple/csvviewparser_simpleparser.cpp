@@ -31,6 +31,10 @@ void ViewSimpleParser::shift_views(const char* new_buffer_start) {
     }
 }
 
+bool ViewSimpleParser::has_fields() const {
+    return !fields_.empty();
+}
+
 const std::vector<std::string_view>& ViewSimpleParser::fields() const noexcept {
     return fields_;
 }

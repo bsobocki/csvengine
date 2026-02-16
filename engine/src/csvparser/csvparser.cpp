@@ -5,25 +5,9 @@
 
 namespace csv {
 
+// --- Parser ---
+
 Parser::Parser(const Config& config): config_(config) {}
-
-QuotingParser::QuotingParser(const Config& config): Parser(config) {}
-
-std::unique_ptr<Parser> make_parser(const Config& config) {
-    if (config.has_quoting) {
-        if (config.parse_mode == Config::ParseMode::strict) {
-            return std::make_unique<StrictQuotingParser>(config);
-        }
-        return std::make_unique<LenientQuotingParser>(config);
-    }
-    return std::make_unique<SimpleParser>(config);
-}
-
-
-
-// ============================================================
-// Parser
-// ============================================================
 
 void Parser::reset() noexcept {
     incomplete_last_read_ = false;
@@ -64,10 +48,19 @@ const std::vector<std::string_view> Parser::fields_view() const noexcept {
 }
 
 
+// --- Quoting Parser ---
 
-// ============================================================
-// Quoting Parser
-// ============================================================
+QuotingParser::QuotingParser(const Config& config): Parser(config) {}
+
+std::unique_ptr<Parser> make_parser(const Config& config) {
+    if (config.has_quoting) {
+        if (config.parse_mode == Config::ParseMode::strict) {
+            return std::make_unique<StrictQuotingParser>(config);
+        }
+        return std::make_unique<LenientQuotingParser>(config);
+    }
+    return std::make_unique<SimpleParser>(config);
+}
 
 void QuotingParser::remove_last_saved_char() {
     if (!fields_.empty() && !fields_.back().empty()) {

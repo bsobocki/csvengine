@@ -18,4 +18,8 @@ void SimpleParser::add_field(const std::string_view& field) {
     fields_.emplace_back(field);
 }
 
+bool SimpleParser::has_fields() const {
+    return !fields_.empty();
+}
+
 }

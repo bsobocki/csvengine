@@ -24,7 +24,7 @@ std::vector<std::string_view> SimpleParserBase::split(std::string_view str, cons
 
 void SimpleParserBase::insert_fields(const std::vector<std::string_view>& fields) {
     auto field = fields.begin();
-    if (incomplete_last_read_ && !fields_.empty() && field != fields.end()) {
+    if (incomplete_last_read_ && has_fields() && field != fields.end()) {
         merge_incomplete_field(*field++);
     }
     while(field != fields.end()) {
