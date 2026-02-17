@@ -288,7 +288,7 @@ ctest --output-on-failure
 
 ## Testing
 
-The project currently includes **289 unit tests** covering:
+The project currently includes **300+ unit tests** covering:
 
 - Basic parsing (simple fields, empty fields)
 - Quoting (escaped quotes, embedded delimiters, newlines in fields)
