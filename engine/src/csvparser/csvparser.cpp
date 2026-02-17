@@ -7,9 +7,11 @@ namespace csv {
 
 // --- Parser ---
 
-Parser::Parser(const Config& config): config_(config) {}
+template <typename FieldType>
+ParserBase<FieldType>::ParserBase(const Config& config): config_(config) {}
 
-void Parser::reset() noexcept {
+template <typename FieldType>
+void ParserBase<FieldType>::reset() noexcept {
     incomplete_last_read_ = false;
     pending_cr_ = false;
     fields_.clear();
@@ -17,42 +19,50 @@ void Parser::reset() noexcept {
     err_msg_.clear();
 }
 
-void QuotingParser::reset() noexcept {
-    Parser::reset();
-    in_quotes_ = false;
-    pending_quote_ = false;
-}
-
-size_t Parser::consumed() const noexcept {
+template <typename FieldType>
+size_t ParserBase<FieldType>::consumed() const noexcept {
     return consumed_;
 }
 
-std::string_view Parser::err_msg() const noexcept {
+template <typename FieldType>
+std::string_view ParserBase<FieldType>::err_msg() const noexcept {
     return err_msg_;
 }
 
-std::vector<std::string> Parser::move_fields() noexcept {
-    return std::move(fields_);
-}
-
-const std::vector<std::string>& Parser::peek_fields() const noexcept {
+template <typename FieldType>
+std::vector<FieldType>& ParserBase<FieldType>::fields() noexcept {
     return fields_;
-}
-
-const std::vector<std::string_view> Parser::fields_view() const noexcept {
-    std::vector<std::string_view> view(fields_.size());
-    std::transform(fields_.begin(), fields_.end(), view.begin(), [](const std::string& field) {
-        return std::string_view(field);
-    });
-    return view;
 }
 
 
 // --- Quoting Parser ---
 
-QuotingParser::QuotingParser(const Config& config): Parser(config) {}
+template <typename FieldType>
+QuotingParser<FieldType>::QuotingParser(const Config& config): Parser<FieldType>(config) {}
 
-std::unique_ptr<Parser> make_parser(const Config& config) {
+template <typename FieldType>
+void QuotingParser<FieldType>::reset() noexcept {
+    ParserBase<FieldType>::reset();
+    in_quotes_ = false;
+    pending_quote_ = false;
+}
+
+template <typename FieldType>
+bool QuotingParser<FieldType>::is_quote(char c) {
+    return c == this->config_.quote_char;
+};
+
+template <typename FieldType>
+bool QuotingParser<FieldType>::is_delim(char c) {
+    return c == this->config_.delimiter;
+};
+
+template <typename FieldType>
+bool QuotingParser<FieldType>::is_newline(char c) {
+    return this->config_.is_line_ending(c);
+};
+
+std::unique_ptr<Parser<std::string>> make_parser(const Config& config) {
     if (config.has_quoting) {
         if (config.parse_mode == Config::ParseMode::strict) {
             return std::make_unique<StrictQuotingParser>(config);
@@ -62,22 +72,9 @@ std::unique_ptr<Parser> make_parser(const Config& config) {
     return std::make_unique<SimpleParser>(config);
 }
 
-void QuotingParser::remove_last_saved_char() {
-    if (!fields_.empty() && !fields_.back().empty()) {
-        fields_.back().pop_back();
-    }
-}
-
-bool QuotingParser::is_quote(char c) {
-    return c == config_.quote_char;
-};
-
-bool QuotingParser::is_delim(char c) {
-    return c == config_.delimiter;
-};
-
-bool QuotingParser::is_newline(char c) {
-    return config_.is_line_ending(c);
-};
+template class ParserBase<std::string>;
+template class ParserBase<std::string_view>;
+template class QuotingParser<std::string>;
+template class QuotingParser<std::string_view>;
 
 }

@@ -4,7 +4,7 @@
 
 namespace csv {
 
-SimdParser::SimdParser(const Config& config): Parser(config) {}
+SimdParser::SimdParser(const Config& config): Parser<std::string>(config) {}
 
 ParseStatus SimdParser::parse(std::string_view buffer) {
     consumed_ = 0;

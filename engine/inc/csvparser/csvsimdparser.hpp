@@ -4,7 +4,7 @@
 
 namespace csv {
 
-class SimdParser : public Parser {
+class SimdParser : public Parser<std::string> {
 public:
     explicit SimdParser(const Config& config);
 

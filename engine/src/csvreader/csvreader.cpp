@@ -56,7 +56,7 @@ bool Reader::next() {
             auto refill_result = buffer_->refill();
 
             if (refill_result == ReadingResult::eof) {
-                auto fields = parser_->move_fields();
+                auto fields = parser_->fields();
 
                 if (!fields.empty()) {
                     save_record(std::move(fields));
@@ -75,7 +75,7 @@ bool Reader::next() {
         buffer_->consume(parser_->consumed());
 
         if (result == ParseStatus::complete) {
-            save_record(parser_->move_fields());
+            save_record(std::move(parser_->fields()));
             return true;
         }
 

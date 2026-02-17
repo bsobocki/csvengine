@@ -7,27 +7,27 @@ using namespace csv;
 
 class LenientParserTest : public ::testing::Test {
 protected:
-    std::unique_ptr<Parser> lenient_parser = make_parser({.parse_mode = Config::ParseMode::lenient});
-    std::unique_ptr<Parser> semi_parser = make_parser({.delimiter = ';', .parse_mode = Config::ParseMode::lenient});
-    std::unique_ptr<Parser> lenient_parser_crlf = make_parser({
+    std::unique_ptr<Parser<std::string>> lenient_parser = make_parser({.parse_mode = Config::ParseMode::lenient});
+    std::unique_ptr<Parser<std::string>> semi_parser = make_parser({.delimiter = ';', .parse_mode = Config::ParseMode::lenient});
+    std::unique_ptr<Parser<std::string>> lenient_parser_crlf = make_parser({
         .parse_mode = Config::ParseMode::lenient,
         .line_ending = Config::LineEnding::crlf
     });
-    std::unique_ptr<Parser> lenient_parser_cr = make_parser({
+    std::unique_ptr<Parser<std::string>> lenient_parser_cr = make_parser({
         .parse_mode = Config::ParseMode::lenient,
         .line_ending = Config::LineEnding::cr
     });
-    std::unique_ptr<Parser> lenient_parser_lf = make_parser({
+    std::unique_ptr<Parser<std::string>> lenient_parser_lf = make_parser({
         .parse_mode = Config::ParseMode::lenient,
         .line_ending = Config::LineEnding::lf
     });
-    void ExpectParse(std::unique_ptr<Parser>& parser,
+    void ExpectParse(std::unique_ptr<Parser<std::string>>& parser,
                 std::string_view input,
                 ParseStatus expected_status,
                 const std::vector<std::string>& expected_fields = {}) {
         EXPECT_EQ(parser->parse(input), expected_status);
         if (!expected_fields.empty()) {
-            EXPECT_EQ(parser->peek_fields(), expected_fields);
+            EXPECT_EQ(parser->fields(), expected_fields);
         }
     }
 };
@@ -59,25 +59,6 @@ TEST_F(LenientParserTest, Basic_AllEmptyFields) {
 TEST_F(LenientParserTest, Basic_SingleEmptyField) {
     ExpectParse(lenient_parser, "\n", 
         ParseStatus::complete, {""});
-}
-
-// ============================================================
-// MOVE FIELDS
-// ============================================================
-
-TEST_F(LenientParserTest, MoveFields_MoveData) {
-    const std::string data = "\"Mark\",is,quite,\"\"\"normal\"\"\"\n";
-    std::vector<std::string> expected_fields = {"Mark", "is", "quite", "\"normal\""};
-
-    ExpectParse(lenient_parser, data, ParseStatus::complete, expected_fields);
-    EXPECT_EQ(lenient_parser->move_fields(), expected_fields);
-    EXPECT_TRUE(lenient_parser->peek_fields().empty());
-    EXPECT_TRUE(lenient_parser->move_fields().empty());
-}
-
-TEST_F(LenientParserTest, MoveFields_EmptyFields) {
-    EXPECT_TRUE(lenient_parser->move_fields().empty());
-    EXPECT_TRUE(lenient_parser->peek_fields().empty());
 }
 
 // ============================================================
@@ -224,31 +205,31 @@ TEST_F(LenientParserTest, Quoted_ComplexQuoting) {
 TEST_F(LenientParserTest, Buffer_IncompleteUnquotedField) {
     EXPECT_EQ(lenient_parser->parse("hello"), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser->parse(" world\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser->move_fields(), std::vector<std::string>{"hello world"});
+    EXPECT_EQ(lenient_parser->fields(), std::vector<std::string>{"hello world"});
 }
 
 TEST_F(LenientParserTest, Buffer_IncompleteQuotedField) {
     EXPECT_EQ(lenient_parser->parse("\"hel"), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser->parse("lo\"\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser->move_fields(), std::vector<std::string>{"hello"});
+    EXPECT_EQ(lenient_parser->fields(), std::vector<std::string>{"hello"});
 }
 
 TEST_F(LenientParserTest, Buffer_IncompleteQuotedField_QuoteInTheMiddle) {
     EXPECT_EQ(lenient_parser->parse("\"hel"), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser->parse("lo\"!\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser->move_fields(), std::vector<std::string>{"hello!"});
+    EXPECT_EQ(lenient_parser->fields(), std::vector<std::string>{"hello!"});
 }
 
 TEST_F(LenientParserTest, Buffer_IncompleteQuotedField_QuoteAtTheEnd) {
     EXPECT_EQ(lenient_parser->parse("\"hello\""), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser->parse("\""), ParseStatus::need_more_data);
-    EXPECT_EQ(lenient_parser->move_fields(), std::vector<std::string>{"hello\""});
+    EXPECT_EQ(lenient_parser->fields(), std::vector<std::string>{"hello\""});
 }
 
 TEST_F(LenientParserTest, Buffer_QuoteAtBufferEnd_FollowedByNewline) {
     EXPECT_EQ(lenient_parser->parse("\"hello\""), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser->parse("\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser->move_fields(), std::vector<std::string>{"hello"});
+    EXPECT_EQ(lenient_parser->fields(), std::vector<std::string>{"hello"});
 }
 
 TEST_F(LenientParserTest, Buffer_QuoteAtBufferEnd_FollowedByQuote) {
@@ -267,13 +248,13 @@ TEST_F(LenientParserTest, Buffer_NewlineAndDelimiterInQuotes) {
                 {"something\n,", "different", ",next"});
 
     std::vector<std::string> expected_fields = {"something\n,", "different", ",next"};
-    EXPECT_EQ(lenient_parser->move_fields(), expected_fields);
+    EXPECT_EQ(lenient_parser->fields(), expected_fields);
 }
 
 TEST_F(LenientParserTest, Buffer_SplitEscapedQuote) {
     EXPECT_EQ(lenient_parser->parse("\"a\""), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser->parse("\"b\"\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser->move_fields(), std::vector<std::string>{"a\"b"});
+    EXPECT_EQ(lenient_parser->fields(), std::vector<std::string>{"a\"b"});
 }
 
 TEST_F(LenientParserTest, Buffer_EmptyBuffer) {
@@ -285,7 +266,7 @@ TEST_F(LenientParserTest, Buffer_MultipleChunks) {
     EXPECT_EQ(lenient_parser->parse("a,"), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser->parse("b,"), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser->parse("c\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser->move_fields(), (std::vector<std::string>{"a", "b", "c"}));
+    EXPECT_EQ(lenient_parser->fields(), (std::vector<std::string>{"a", "b", "c"}));
 }
 
 TEST_F(LenientParserTest, Buffer_SingleCharChunks) {
@@ -298,7 +279,7 @@ TEST_F(LenientParserTest, Buffer_SingleCharChunks) {
             EXPECT_EQ(status, ParseStatus::need_more_data);
         }
     }
-    EXPECT_EQ(lenient_parser->move_fields(), (std::vector<std::string>{"a", "b"}));
+    EXPECT_EQ(lenient_parser->fields(), (std::vector<std::string>{"a", "b"}));
 }
 
 // ============================================================
@@ -308,9 +289,9 @@ TEST_F(LenientParserTest, Buffer_SingleCharChunks) {
 TEST_F(LenientParserTest, Reset_ClearsFields) {
     std::vector<std::string> expected_fields = {"a", "b"};
     ExpectParse(lenient_parser, "a,b\nabc", ParseStatus::complete, expected_fields);
-    EXPECT_EQ(lenient_parser->peek_fields(), expected_fields);
+    EXPECT_EQ(lenient_parser->fields(), expected_fields);
     lenient_parser->reset();
-    EXPECT_EQ(lenient_parser->peek_fields(), std::vector<std::string>{});
+    EXPECT_EQ(lenient_parser->fields(), std::vector<std::string>{});
 }
 
 TEST_F(LenientParserTest, Reset_ClearsState) {
@@ -318,14 +299,14 @@ TEST_F(LenientParserTest, Reset_ClearsState) {
     lenient_parser->reset();
     // Should parse fresh, not continue quoted state
     EXPECT_EQ(lenient_parser->parse("world\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser->move_fields(), std::vector<std::string>{"world"});
+    EXPECT_EQ(lenient_parser->fields(), std::vector<std::string>{"world"});
 }
 
 TEST_F(LenientParserTest, Reset_ClearsPendingQuote) {
     lenient_parser->parse("\"hello\"");  // Pending quote
     lenient_parser->reset();
     EXPECT_EQ(lenient_parser->parse("world\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser->move_fields(), std::vector<std::string>{"world"});
+    EXPECT_EQ(lenient_parser->fields(), std::vector<std::string>{"world"});
 }
 
 TEST_F(LenientParserTest, Reset_ClearsConsumed) {
@@ -458,7 +439,7 @@ TEST_F(LenientParserTest, Lenient_UnclosedQuoteAtEOF) {
     // "hello without close - lenient accepts at EOF
     EXPECT_EQ(lenient_parser->parse("\"hello"), ParseStatus::need_more_data);
     // Simulate EOF by checking what we have
-    EXPECT_EQ(lenient_parser->peek_fields(), std::vector<std::string>{"hello"});
+    EXPECT_EQ(lenient_parser->fields(), std::vector<std::string>{"hello"});
 }
 
 TEST_F(LenientParserTest, Lenient_NewlineInQuotedField) {
@@ -487,14 +468,14 @@ TEST_F(LenientParserTest, Lenient_QuotedTabsAndSpaces) {
 
 TEST_F(LenientParserTest, CR_Mode_Parses_CR_Terminated_Line) {
     EXPECT_EQ(lenient_parser_cr->parse("a,b\rc,d\r"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser_cr->peek_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(lenient_parser_cr->fields(), (std::vector<std::string>{"a","b"}));
     EXPECT_EQ(lenient_parser_cr->consumed(), 4u);
 }
 
 TEST_F(LenientParserTest, CR_Mode_DoesNotTreat_LF_AsTerminator) {
     EXPECT_EQ(lenient_parser_cr->parse("a,b\n"), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser_cr->consumed(), 4u);
-    EXPECT_EQ(lenient_parser_cr->peek_fields(), (std::vector<std::string>{"a","b\n"}));
+    EXPECT_EQ(lenient_parser_cr->fields(), (std::vector<std::string>{"a","b\n"}));
 }
 
 // ============================================================
@@ -504,7 +485,7 @@ TEST_F(LenientParserTest, CR_Mode_DoesNotTreat_LF_AsTerminator) {
 TEST_F(LenientParserTest, LF_Mode_DoesNotTreat_CR_AsTerminator) {
     EXPECT_EQ(lenient_parser_lf->parse("a,b\r"), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser_lf->consumed(), 4u);
-    EXPECT_EQ(lenient_parser_lf->peek_fields(), (std::vector<std::string>{"a","b\r"}));
+    EXPECT_EQ(lenient_parser_lf->fields(), (std::vector<std::string>{"a","b\r"}));
 }
 
 // ============================================================
@@ -513,48 +494,48 @@ TEST_F(LenientParserTest, LF_Mode_DoesNotTreat_CR_AsTerminator) {
 
 TEST_F(LenientParserTest, CRLF_Accepts_CRLF_Strips_CR) {
     EXPECT_EQ(lenient_parser_crlf->parse("a,b\r\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser_crlf->peek_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a","b"}));
 }
 
 TEST_F(LenientParserTest, CRLF_AcceptsLFOnly) {
     EXPECT_EQ(lenient_parser_crlf->parse("a,b\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser_crlf->peek_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a","b"}));
 }
 
 TEST_F(LenientParserTest, CRLF_EmptyLine_DoesNotCrash_AndConsumesOneRecord) {
     EXPECT_EQ(lenient_parser_crlf->parse("\r\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser_crlf->peek_fields(), (std::vector<std::string>{""}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{""}));
     EXPECT_EQ(lenient_parser_crlf->consumed(), 2u);
 }
 
 TEST_F(LenientParserTest, CRLF_EmptyLine_WithLFOnly_Complete) {
     EXPECT_EQ(lenient_parser_crlf->parse("\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser_crlf->peek_fields(), (std::vector<std::string>{""}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{""}));
 }
 
 TEST_F(LenientParserTest, CRLF_ConsumesTwoBytes_ForCRLF) {
     EXPECT_EQ(lenient_parser_crlf->parse("a,b\r\nc,d\r\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser_crlf->peek_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a","b"}));
     EXPECT_EQ(lenient_parser_crlf->consumed(), 5u);
 }
 
 TEST_F(LenientParserTest, CRLF_MultipleRecordsInOneBuffer_ConsumesOnlyFirst) {
     EXPECT_EQ(lenient_parser_crlf->parse("a,b\r\nc,d\r\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser_crlf->peek_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a","b"}));
     EXPECT_EQ(lenient_parser_crlf->consumed(), 5u);
 
     lenient_parser_crlf->reset();
     EXPECT_EQ(lenient_parser_crlf->parse("c,d\r\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser_crlf->peek_fields(), (std::vector<std::string>{"c","d"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"c","d"}));
     EXPECT_EQ(lenient_parser_crlf->consumed(), 5u);
 }
 
 TEST_F(LenientParserTest, CRLF_PartialAcrossChunks_CRThenLF) {
     EXPECT_EQ(lenient_parser_crlf->parse("a,b\r"), ParseStatus::need_more_data);
-    EXPECT_EQ(lenient_parser_crlf->peek_fields(), (std::vector<std::string>{"a","b\r"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a","b\r"}));
 
     EXPECT_EQ(lenient_parser_crlf->parse("\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser_crlf->move_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a","b"}));
 }
 
 // ============================================================
@@ -564,30 +545,30 @@ TEST_F(LenientParserTest, CRLF_PartialAcrossChunks_CRThenLF) {
 TEST_F(LenientParserTest, Regression_NoNewlinePtr_Nullptr_IsHandled) {
     EXPECT_EQ(lenient_parser_crlf->parse("abc"), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser_crlf->consumed(), 3u);
-    EXPECT_EQ(lenient_parser_crlf->peek_fields(), (std::vector<std::string>{"abc"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"abc"}));
 }
 
 TEST_F(LenientParserTest, CRLF_SplitAcrossChunks_CRThenLF_StripsCR) {
     EXPECT_EQ(lenient_parser_crlf->parse("a,b\r"), ParseStatus::need_more_data);
-    EXPECT_EQ(lenient_parser_crlf->peek_fields(), (std::vector<std::string>{"a", "b\r"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a", "b\r"}));
 
     EXPECT_EQ(lenient_parser_crlf->parse("\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser_crlf->move_fields(), (std::vector<std::string>{"a", "b"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a", "b"}));
 }
 
 TEST_F(LenientParserTest, CRLF_SplitAfterClosingQuote) {
     EXPECT_EQ(lenient_parser_crlf->parse("\"a\"\r"), ParseStatus::need_more_data);
-    EXPECT_EQ(lenient_parser_crlf->peek_fields(), (std::vector<std::string>{"a\r"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a\r"}));
 
     EXPECT_EQ(lenient_parser_crlf->parse("\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser_crlf->move_fields(), (std::vector<std::string>{"a"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a"}));
 }
 
 TEST_F(LenientParserTest, PendingCR_PopsWithoutChecks) {
     EXPECT_EQ(lenient_parser_crlf->parse("a\r"), ParseStatus::need_more_data);
     lenient_parser_crlf->reset();
     EXPECT_EQ(lenient_parser_crlf->parse("\n"), ParseStatus::complete); // pending_cr_ is false after reset()
-    EXPECT_EQ(lenient_parser_crlf->peek_fields(), (std::vector<std::string>{""}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{""}));
 }
 
 TEST_F(LenientParserTest, NeedMoreDataMustConsumeOrProgress) {
@@ -599,56 +580,56 @@ TEST_F(LenientParserTest, CRLF_SplitAcrossBuffers_OutsideQuotes) {
     EXPECT_EQ(lenient_parser_crlf->parse("a,b\r"), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser_crlf->parse("\n"), ParseStatus::complete);
 
-    EXPECT_EQ(lenient_parser_crlf->move_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a","b"}));
 }
 
 TEST_F(LenientParserTest, CRLF_QuoteThenCRAtEnd_ProgressAndCorrectConsume) {
     EXPECT_EQ(lenient_parser_crlf->parse("\"a\"\r"), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser_crlf->consumed(), 4u);
     EXPECT_EQ(lenient_parser_crlf->parse("\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser_crlf->move_fields(), (std::vector<std::string>{"a"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a"}));
 }
 
 TEST_F(LenientParserTest, SplitOutsideQuotes_CRThenLF_RemovesCR) {
     EXPECT_EQ(lenient_parser_crlf->parse("a,b\r"), ParseStatus::need_more_data);
-    EXPECT_EQ(lenient_parser_crlf->peek_fields(), (std::vector<std::string>{"a", "b\r"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a", "b\r"}));
     EXPECT_EQ(lenient_parser_crlf->parse("\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser_crlf->move_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a","b"}));
 }
 
 TEST_F(LenientParserTest, SplitOutsideQuotes_CRThenChar_TreatsCR_AsData_Complete) {
     EXPECT_EQ(lenient_parser_crlf->parse("a,b\r"), ParseStatus::need_more_data);
-    EXPECT_EQ(lenient_parser_crlf->peek_fields(), (std::vector<std::string>{"a", "b\r"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a", "b\r"}));
     EXPECT_EQ(lenient_parser_crlf->parse("a\r\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser_crlf->move_fields(), (std::vector<std::string>{"a","b\ra"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a","b\ra"}));
 }
 
 TEST_F(LenientParserTest, EmptyLineSplit_CRThenLF_ProducesEmptyRecord) {
     EXPECT_EQ(lenient_parser_crlf->parse("\r"), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser_crlf->parse("\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser_crlf->move_fields(), (std::vector<std::string>{""}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{""}));
 }
 
 TEST_F(LenientParserTest, PendingCR_NotFollowedByLF_TreatsAsData) {
     EXPECT_EQ(lenient_parser_crlf->parse("a\r"), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser_crlf->parse("x"), ParseStatus::need_more_data);
-    EXPECT_EQ(lenient_parser_crlf->peek_fields(), (std::vector<std::string>{"a\rx"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a\rx"}));
 }
 
 TEST_F(LenientParserTest, ClosingQuoteThenCRLF_InSameBuffer) {
     EXPECT_EQ(lenient_parser_crlf->parse("\"a\"\r\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser_crlf->move_fields(), (std::vector<std::string>{"a"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a"}));
 }
 
 TEST_F(LenientParserTest, ClosingQuoteThenCR_SplitThenLF_Completes) {
     EXPECT_EQ(lenient_parser_crlf->parse("\"a\"\r"), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser_crlf->parse("\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser_crlf->move_fields(), (std::vector<std::string>{"a"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a"}));
 }
 
 TEST_F(LenientParserTest, CRatTheEndOfBuffer_needMoreData_OnlyDataWithCRasData) {
     EXPECT_EQ(lenient_parser_crlf->parse("\"a\"\r"), ParseStatus::need_more_data);
-    EXPECT_EQ(lenient_parser_crlf->move_fields(), (std::vector<std::string>{"a\r"}));
+    EXPECT_EQ(lenient_parser_crlf->fields(), (std::vector<std::string>{"a\r"}));
 }
 
 // ============================================================
@@ -674,25 +655,25 @@ TEST_F(LenientParserTest, TrailingDelimiter_BeforeNewline_Completes_IncludesEmpt
 TEST_F(LenientParserTest, Buffer_SplitEmptyQuotedField) {
     EXPECT_EQ(lenient_parser->parse("\""), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser->parse("\"\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser->move_fields(), (std::vector<std::string>{""}));
+    EXPECT_EQ(lenient_parser->fields(), (std::vector<std::string>{""}));
 }
 
 TEST_F(LenientParserTest, Buffer_Split_EmptyQuotedField_ThenDelimiter) {
     EXPECT_EQ(lenient_parser->parse("\"\""), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser->parse(",x\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser->move_fields(), (std::vector<std::string>{"", "x"}));
+    EXPECT_EQ(lenient_parser->fields(), (std::vector<std::string>{"", "x"}));
 }
 
 TEST_F(LenientParserTest, Buffer_Split_AfterDelimiter_BeforeOpenQuote) {
     EXPECT_EQ(lenient_parser->parse("a,"), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser->parse("\"b\"\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser->move_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(lenient_parser->fields(), (std::vector<std::string>{"a","b"}));
 }
 
 TEST_F(LenientParserTest, Buffer_ClosingQuoteAtEnd_FollowedByDelimiter) {
     EXPECT_EQ(lenient_parser->parse("\"a\""), ParseStatus::need_more_data);
     EXPECT_EQ(lenient_parser->parse(",b\n"), ParseStatus::complete);
-    EXPECT_EQ(lenient_parser->move_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(lenient_parser->fields(), (std::vector<std::string>{"a","b"}));
 }
 
 TEST_F(LenientParserTest, Lenient_SpaceBeforeQuote_AfterDelimiter_Complete) {

@@ -4,7 +4,7 @@
 
 namespace csv {
 
-StrictQuotingParser::StrictQuotingParser(const Config& config): QuotingParser(config) {}
+StrictQuotingParser::StrictQuotingParser(const Config& config): QuotingParser<std::string>(config) {}
 
 ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
     consumed_ = 0;
@@ -58,7 +58,7 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
         }
         else {
             consume();
-            remove_last_saved_char();
+            remove_last_char_from_fields();
             return ParseStatus::complete;
         }
     }
@@ -201,6 +201,12 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
     incomplete_last_read_ = true;
 
     return ParseStatus::need_more_data;
+}
+
+void StrictQuotingParser::remove_last_char_from_fields() {
+    if (!this->fields_.empty() && !this->fields_.back().empty()) {
+        this->fields_.back().pop_back();
+    }
 }
 
 }

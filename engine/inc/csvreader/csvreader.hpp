@@ -92,7 +92,7 @@ public:
     [[nodiscard]] bool next() override;
 
 private:
-    std::unique_ptr<Parser> parser_;
+    std::unique_ptr<Parser<std::string>> parser_;
 };
 
 class ViewReader : public ReaderBase<RecordView> {
@@ -112,7 +112,7 @@ public:
     [[nodiscard]] bool next() override;
 
 private:
-    std::unique_ptr<ViewSimpleParser> parser_;
+    std::unique_ptr<Parser<std::string_view>> parser_;
 };
 
 }

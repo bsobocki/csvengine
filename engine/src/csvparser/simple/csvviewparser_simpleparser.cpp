@@ -4,7 +4,7 @@
 
 namespace csv {
 
-ViewSimpleParser::ViewSimpleParser(const Config& config): SimpleParserBase(config) {}
+ViewSimpleParser::ViewSimpleParser(const Config& config): SimpleParserBase<std::string_view>(config) {}
 
 void ViewSimpleParser::remove_last_char_from_fields() {
     fields_.back().remove_suffix(1);
@@ -40,7 +40,7 @@ const std::vector<std::string_view>& ViewSimpleParser::fields() const noexcept {
 }
 
 void ViewSimpleParser::reset() noexcept {
-    Parser::reset();
+    SimpleParserBase<std::string_view>::reset();
     fields_.clear();
 }
 

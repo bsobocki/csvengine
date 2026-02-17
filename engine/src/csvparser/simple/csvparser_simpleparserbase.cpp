@@ -3,9 +3,11 @@
 
 namespace csv {
 
-SimpleParserBase::SimpleParserBase(const Config& config): Parser(config) {}
+template <typename FieldType>
+SimpleParserBase<FieldType>::SimpleParserBase(const Config& config): Parser<FieldType>(config) {}
 
-std::vector<std::string_view> SimpleParserBase::split(std::string_view str, const char delim) const {
+template <typename FieldType>
+std::vector<std::string_view> SimpleParserBase<FieldType>::split(std::string_view str, const char delim) const {
     std::vector<std::string_view> result;
     const char* str_end = str.data() + str.size();
     const char* start = str.data();
@@ -22,9 +24,10 @@ std::vector<std::string_view> SimpleParserBase::split(std::string_view str, cons
     return result;
 }
 
-void SimpleParserBase::insert_fields(const std::vector<std::string_view>& fields) {
+template <typename FieldType>
+void SimpleParserBase<FieldType>::insert_fields(const std::vector<std::string_view>& fields) {
     auto field = fields.begin();
-    if (incomplete_last_read_ && has_fields() && field != fields.end()) {
+    if (this->incomplete_last_read_ && has_fields() && field != fields.end()) {
         merge_incomplete_field(*field++);
     }
     while(field != fields.end()) {
@@ -32,20 +35,21 @@ void SimpleParserBase::insert_fields(const std::vector<std::string_view>& fields
     }
 }
 
-ParseStatus SimpleParserBase::parse(std::string_view buffer) {
-    consumed_ = 0;
+template <typename FieldType>
+ParseStatus SimpleParserBase<FieldType>::parse(std::string_view buffer) {
+    this->consumed_ = 0;
 
-    const char newline = config_.line_ending == Config::LineEnding::cr ? '\r' : '\n';
+    const char newline = this->config_.line_ending == Config::LineEnding::cr ? '\r' : '\n';
     const char *newline_ptr = static_cast<const char*>(memchr(buffer.data(), newline, buffer.size()));
     
     if (!newline_ptr) {
         if (!buffer.empty()) {
-            auto fields = split(buffer, config_.delimiter);
+            auto fields = split(buffer, this->config_.delimiter);
             insert_fields(fields);
-            consumed_ = buffer.size();
-            incomplete_last_read_ = true;
+            this->consumed_ = buffer.size();
+            this->incomplete_last_read_ = true;
             if (buffer.back() == '\r') {
-                pending_cr_ = true;
+                this->pending_cr_ = true;
             }
         }
         return ParseStatus::need_more_data;
@@ -54,28 +58,30 @@ ParseStatus SimpleParserBase::parse(std::string_view buffer) {
     const size_t newline_pos = static_cast<size_t>(newline_ptr - buffer.data());
     auto line = buffer.substr(0, newline_pos);
 
-    if (config_.line_ending == Config::LineEnding::crlf) {
+    if (this->config_.line_ending == Config::LineEnding::crlf) {
         if (!line.empty() && line.back() == '\r') {
             line.remove_suffix(1);
         }
     }
 
-    consumed_ = newline_pos + 1;
+    this->consumed_ = newline_pos + 1;
 
     if (line.empty()) {
-        if (config_.line_ending == Config::LineEnding::crlf && pending_cr_) {
-            remove_last_char_from_fields();
-            pending_cr_ = false;
+        if (this->config_.line_ending == Config::LineEnding::crlf && this->pending_cr_) {
+            this->remove_last_char_from_fields();
+            this->pending_cr_ = false;
         }
-        incomplete_last_read_ = false;
+        this->incomplete_last_read_ = false;
         return ParseStatus::complete;
     }
 
-    auto fields = split(line, config_.delimiter);
+    auto fields = split(line, this->config_.delimiter);
     insert_fields(fields);
 
-    incomplete_last_read_ = false;
+    this->incomplete_last_read_ = false;
     return ParseStatus::complete;
 }
 
+template class SimpleParserBase<std::string>;
+template class SimpleParserBase<std::string_view>;
 }

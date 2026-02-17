@@ -4,7 +4,8 @@
 
 namespace csv {
 
-class SimpleParserBase : public Parser {
+template <typename FieldType>
+class SimpleParserBase : public Parser<FieldType> {
 public:
     /// @brief function parse doesn't reset the parser state
     [[nodiscard]] ParseStatus parse(std::string_view buffer) override;
@@ -18,10 +19,9 @@ protected:
 
     virtual void merge_incomplete_field(const std::string_view& field) = 0;
     virtual void add_field(const std::string_view& field) = 0;
-    virtual void remove_last_char_from_fields() = 0;
 };
 
-class SimpleParser : public SimpleParserBase {
+class SimpleParser : public SimpleParserBase<std::string> {
 public:
     explicit SimpleParser(const Config& config);
 
@@ -33,7 +33,7 @@ private:
 };
 
 
-class ViewSimpleParser : public SimpleParserBase {
+class ViewSimpleParser : public SimpleParserBase<std::string_view> {
 public:
     explicit ViewSimpleParser(const Config& config);
 
@@ -46,8 +46,6 @@ private:
     void merge_incomplete_field(const std::string_view& field) override;
     void add_field(const std::string_view& field) override;
     void remove_last_char_from_fields() override;
-
-    std::vector<std::string_view> fields_;
 };
 
 }

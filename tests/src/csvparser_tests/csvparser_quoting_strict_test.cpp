@@ -8,28 +8,28 @@ using namespace csv;
 
 class StrictParserTest : public ::testing::Test {
 protected:
-    std::unique_ptr<Parser> strict_parser = make_parser({.parse_mode = Config::ParseMode::strict});
-    std::unique_ptr<Parser> strict_parser_crlf = make_parser({
+    std::unique_ptr<Parser<std::string>> strict_parser = make_parser({.parse_mode = Config::ParseMode::strict});
+    std::unique_ptr<Parser<std::string>> strict_parser_crlf = make_parser({
         .parse_mode = Config::ParseMode::strict,
         .line_ending = Config::LineEnding::crlf
     });
-    std::unique_ptr<Parser> strict_parser_cr = make_parser({
+    std::unique_ptr<Parser<std::string>> strict_parser_cr = make_parser({
         .parse_mode = Config::ParseMode::strict,
         .line_ending = Config::LineEnding::cr
     });
-    std::unique_ptr<Parser> strict_parser_lf = make_parser({
+    std::unique_ptr<Parser<std::string>> strict_parser_lf = make_parser({
         .parse_mode = Config::ParseMode::strict,
         .line_ending = Config::LineEnding::lf
     });
-    std::unique_ptr<Parser> semi_parser = make_parser({.delimiter = ';'});
+    std::unique_ptr<Parser<std::string>> semi_parser = make_parser({.delimiter = ';'});
 
-    void ExpectParse(std::unique_ptr<Parser>& parser,
+    void ExpectParse(std::unique_ptr<Parser<std::string>>& parser,
                 std::string_view input,
                 ParseStatus expected_status,
                 const std::vector<std::string>& expected_fields = {}){
         EXPECT_EQ(parser->parse(input), expected_status);
         if (!expected_fields.empty()) {
-            EXPECT_EQ(parser->peek_fields(), expected_fields);
+            EXPECT_EQ(parser->fields(), expected_fields);
         }
     }
 };
@@ -61,26 +61,7 @@ TEST_F(StrictParserTest, Basic_AllEmptyFields) {
 TEST_F(StrictParserTest, Basic_SingleEmptyField) {
     ExpectParse(strict_parser, "\n", 
         ParseStatus::complete, {""});
-}
-
-// ============================================================
-// MOVE FIELDS
-// ============================================================
-
-TEST_F(StrictParserTest, MoveFields_MoveData) {
-    std::vector<std::string> expected_fields = {"Mark", "is", "quite","\"normal\""};
-
-    ExpectParse(strict_parser, "\"Mark\",is,quite,\"\"\"normal\"\"\"\n", ParseStatus::complete, expected_fields);
-    EXPECT_EQ(strict_parser->move_fields(),  expected_fields);
-    EXPECT_TRUE(strict_parser->peek_fields().empty());
-    EXPECT_TRUE(strict_parser->move_fields().empty());
-}
-
-TEST_F(StrictParserTest, MoveFields_EmptyFields) {
-    EXPECT_TRUE(strict_parser->move_fields().empty());
-    EXPECT_TRUE(strict_parser->peek_fields().empty());
-}
-                    
+}          
                     
 // ============================================================
 // QUOTING
@@ -166,19 +147,19 @@ TEST_F(StrictParserTest, Quoted_WrongQuoting_Fail) {
 TEST_F(StrictParserTest, Buffer_IncompleteUnquotedField) {
     EXPECT_EQ(strict_parser->parse("hello"), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser->parse(" world\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser->move_fields(), std::vector<std::string>{"hello world"});
+    EXPECT_EQ(strict_parser->fields(), std::vector<std::string>{"hello world"});
 }
 
 TEST_F(StrictParserTest, Buffer_IncompleteQuotedField) {
     EXPECT_EQ(strict_parser->parse("\"hel"), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser->parse("lo\"\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser->move_fields(), std::vector<std::string>{"hello"});
+    EXPECT_EQ(strict_parser->fields(), std::vector<std::string>{"hello"});
 }
 
 TEST_F(StrictParserTest, Buffer_QuoteAtBufferEnd_FollowedByNewline) {
     EXPECT_EQ(strict_parser->parse("\"hello\""), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser->parse("\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser->move_fields(), std::vector<std::string>{"hello"});
+    EXPECT_EQ(strict_parser->fields(), std::vector<std::string>{"hello"});
 }
 
 TEST_F(StrictParserTest, StrictParsing_CorrectQuoting_NeedMoreDataWithLastCharAsQuote) {
@@ -193,13 +174,13 @@ TEST_F(StrictParserTest, StrictParsing_NewlineAndDelimiterInQuotes) {
     ExpectParse(strict_parser, ",next\"\n", ParseStatus::complete, {"something\n,","different", ",next"});
 
     std::vector<std::string> expected_fields = {"something\n,","different", ",next"};
-    EXPECT_EQ(strict_parser->move_fields(), expected_fields);
+    EXPECT_EQ(strict_parser->fields(), expected_fields);
 }
 
 TEST_F(StrictParserTest, Buffer_SplitEscapedQuote) {
     EXPECT_EQ(strict_parser->parse("\"a\""), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser->parse("\"b\"\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser->move_fields(), std::vector<std::string>{"a\"b"});
+    EXPECT_EQ(strict_parser->fields(), std::vector<std::string>{"a\"b"});
 }
 
 TEST_F(StrictParserTest, Buffer_EmptyBuffer) {
@@ -211,7 +192,7 @@ TEST_F(StrictParserTest, Buffer_MultipleChunks) {
     EXPECT_EQ(strict_parser->parse("a,"), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser->parse("b,"), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser->parse("c\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser->move_fields(), (std::vector<std::string>{"a", "b", "c"}));
+    EXPECT_EQ(strict_parser->fields(), (std::vector<std::string>{"a", "b", "c"}));
 }
 
 TEST_F(StrictParserTest, Buffer_SingleCharChunks) {
@@ -224,7 +205,7 @@ TEST_F(StrictParserTest, Buffer_SingleCharChunks) {
             EXPECT_EQ(status, ParseStatus::need_more_data);
         }
     }
-    EXPECT_EQ(strict_parser->move_fields(), (std::vector<std::string>{"a", "b"}));
+    EXPECT_EQ(strict_parser->fields(), (std::vector<std::string>{"a", "b"}));
 }
 
 // ============================================================
@@ -232,7 +213,7 @@ TEST_F(StrictParserTest, Buffer_SingleCharChunks) {
 // ============================================================
 
 TEST_F(StrictParserTest, CustomDelimiter_Tab) {
-    std::unique_ptr<Parser> tab_parser = make_parser({.delimiter = '\t'});
+    std::unique_ptr<Parser<std::string>> tab_parser = make_parser({.delimiter = '\t'});
     ExpectParse(tab_parser, "a\tb\tc\n", 
                 ParseStatus::complete, {"a", "b", "c"});
 }
@@ -282,9 +263,9 @@ TEST_F(StrictParserTest, Strict_SpaceAfterQuote) {
 TEST_F(StrictParserTest, Reset_ClearsFields) {
     std::vector<std::string> expected_fields = {"a", "b"};
     ExpectParse(strict_parser, "a,b\nabc", ParseStatus::complete, expected_fields);
-    EXPECT_EQ(strict_parser->peek_fields(), expected_fields);
+    EXPECT_EQ(strict_parser->fields(), expected_fields);
     strict_parser->reset();
-    EXPECT_EQ(strict_parser->peek_fields(), std::vector<std::string>{});
+    EXPECT_EQ(strict_parser->fields(), std::vector<std::string>{});
 }
 
 TEST_F(StrictParserTest, Reset_ClearsState) {
@@ -292,14 +273,14 @@ TEST_F(StrictParserTest, Reset_ClearsState) {
     strict_parser->reset();
 
     EXPECT_EQ(strict_parser->parse("world\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser->move_fields(), std::vector<std::string>{"world"});
+    EXPECT_EQ(strict_parser->fields(), std::vector<std::string>{"world"});
 }
 
 TEST_F(StrictParserTest, Reset_ClearsPendingQuote) {
     strict_parser->parse("\"hello\"");
     strict_parser->reset();
     EXPECT_EQ(strict_parser->parse("world\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser->move_fields(), std::vector<std::string>{"world"});
+    EXPECT_EQ(strict_parser->fields(), std::vector<std::string>{"world"});
 }
 
 TEST_F(StrictParserTest, Reset_ClearsConsumed) {
@@ -351,7 +332,7 @@ TEST_F(StrictParserTest, Edge_VeryLongQuotedField) {
 
 TEST_F(StrictParserTest, CRLF_Accepts_CRLF_Strips_CR) {
     EXPECT_EQ(strict_parser_crlf->parse("a,b\r\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"a","b"}));
 }
 
 TEST_F(StrictParserTest, CRLF_DoNotAccepts_LF_Only) {
@@ -360,7 +341,7 @@ TEST_F(StrictParserTest, CRLF_DoNotAccepts_LF_Only) {
 
 TEST_F(StrictParserTest, CRLF_EmptyLine_DoesNotCrash_AndConsumesOneRecord) {
     EXPECT_EQ(strict_parser_crlf->parse("\r\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{""}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{""}));
     EXPECT_EQ(strict_parser_crlf->consumed(), 2u);
 }
 
@@ -370,27 +351,27 @@ TEST_F(StrictParserTest, CRLF_EmptyLine_WithLFOnly_Crash) {
 
 TEST_F(StrictParserTest, CRLF_ConsumesTwoBytes_ForCRLF) {
     EXPECT_EQ(strict_parser_crlf->parse("a,b\r\nc,d\r\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"a","b"}));
     EXPECT_EQ(strict_parser_crlf->consumed(), 5u);
 }
 
 TEST_F(StrictParserTest, CRLF_MultipleRecordsInOneBuffer_ConsumesOnlyFirst) {
     EXPECT_EQ(strict_parser_crlf->parse("a,b\r\nc,d\r\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"a","b"}));
     EXPECT_EQ(strict_parser_crlf->consumed(), 5u);
 
     strict_parser_crlf->reset();
     EXPECT_EQ(strict_parser_crlf->parse("c,d\r\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"c","d"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"c","d"}));
     EXPECT_EQ(strict_parser_crlf->consumed(), 5u);
 }
 
 TEST_F(StrictParserTest, CRLF_PartialAcrossChunks_CRThenLF) {
     EXPECT_EQ(strict_parser_crlf->parse("a,b\r"), ParseStatus::need_more_data);
-    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a","b\r"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"a","b\r"}));
 
     EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"a","b"}));
 }
 
 // ============================================================
@@ -399,14 +380,14 @@ TEST_F(StrictParserTest, CRLF_PartialAcrossChunks_CRThenLF) {
 
 TEST_F(StrictParserTest, CR_Mode_Parses_CR_Terminated_Line) {
     EXPECT_EQ(strict_parser_cr->parse("a,b\rc,d\r"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser_cr->peek_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(strict_parser_cr->fields(), (std::vector<std::string>{"a","b"}));
     EXPECT_EQ(strict_parser_cr->consumed(), 4u);
 }
 
 TEST_F(StrictParserTest, CR_Mode_DoesNotTreat_LF_AsTerminator) {
     EXPECT_EQ(strict_parser_cr->parse("a,b\n"), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser_cr->consumed(), 4u);
-    EXPECT_EQ(strict_parser_cr->peek_fields(), (std::vector<std::string>{"a","b\n"}));
+    EXPECT_EQ(strict_parser_cr->fields(), (std::vector<std::string>{"a","b\n"}));
 }
 
 // ============================================================
@@ -416,7 +397,7 @@ TEST_F(StrictParserTest, CR_Mode_DoesNotTreat_LF_AsTerminator) {
 TEST_F(StrictParserTest, LF_Mode_Treat_CR_AsData) {
     EXPECT_EQ(strict_parser_lf->parse("a,b\r"), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser_lf->consumed(), 4u);
-    EXPECT_EQ(strict_parser_lf->peek_fields(), (std::vector<std::string>{"a","b\r"}));
+    EXPECT_EQ(strict_parser_lf->fields(), (std::vector<std::string>{"a","b\r"}));
 }
 
 // ============================================================
@@ -426,23 +407,23 @@ TEST_F(StrictParserTest, LF_Mode_Treat_CR_AsData) {
 TEST_F(StrictParserTest, Regression_NoNewlinePtr_Nullptr_IsHandled) {
     EXPECT_EQ(strict_parser_crlf->parse("abc"), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser_crlf->consumed(), 3u);
-    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"abc"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"abc"}));
 }
 
 TEST_F(StrictParserTest, CRLF_SplitAcrossChunks_CRThenLF_StripsCR) {
     EXPECT_EQ(strict_parser_crlf->parse("a,b\r"), ParseStatus::need_more_data);
-    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a", "b\r"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"a", "b\r"}));
 
     EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a", "b"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"a", "b"}));
 }
 
 TEST_F(StrictParserTest, CRLF_SplitAfterClosingQuote) {
     EXPECT_EQ(strict_parser_crlf->parse("\"a\"\r"), ParseStatus::need_more_data);
-    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a\r"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"a\r"}));
 
     EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"a"}));
 }
 
 TEST_F(StrictParserTest, PendingCR_PopsWithoutChecks) {
@@ -460,56 +441,56 @@ TEST_F(StrictParserTest, CRLF_SplitAcrossBuffers_OutsideQuotes) {
     EXPECT_EQ(strict_parser_crlf->parse("a,b\r"), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
 
-    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"a","b"}));
 }
 
 TEST_F(StrictParserTest, CRLF_QuoteThenCRAtEnd_ProgressAndCorrectConsume) {
     EXPECT_EQ(strict_parser_crlf->parse("\"a\"\r"), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser_crlf->consumed(), 4u);
     EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"a"}));
 }
 
 TEST_F(StrictParserTest, SplitOutsideQuotes_CRThenLF_RemovesCR) {
     EXPECT_EQ(strict_parser_crlf->parse("a,b\r"), ParseStatus::need_more_data);
-    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a", "b\r"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"a", "b\r"}));
     EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"a","b"}));
 }
 
 TEST_F(StrictParserTest, SplitOutsideQuotes_CRThenChar_Fail) {
     EXPECT_EQ(strict_parser_crlf->parse("a,b\r"), ParseStatus::need_more_data);
-    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a", "b\r"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"a", "b\r"}));
     EXPECT_EQ(strict_parser_crlf->parse("a\r\n"), ParseStatus::fail);
-    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a","b\r"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"a","b\r"}));
 }
 
 TEST_F(StrictParserTest, EmptyLineSplit_CRThenLF_ProducesEmptyRecord) {
     EXPECT_EQ(strict_parser_crlf->parse("\r"), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{""}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{""}));
 }
 
 TEST_F(StrictParserTest, PendingCR_NotFollowedByLF_Fail) {
     EXPECT_EQ(strict_parser_crlf->parse("a\r"), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser_crlf->parse("x"), ParseStatus::fail);
-    EXPECT_EQ(strict_parser_crlf->peek_fields(), (std::vector<std::string>{"a\r"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"a\r"}));
 }
 
 TEST_F(StrictParserTest, ClosingQuoteThenCRLF_InSameBuffer) {
     EXPECT_EQ(strict_parser_crlf->parse("\"a\"\r\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"a"}));
 }
 
 TEST_F(StrictParserTest, ClosingQuoteThenCR_SplitThenLF_Completes) {
     EXPECT_EQ(strict_parser_crlf->parse("\"a\"\r"), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser_crlf->parse("\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"a"}));
 }
 
 TEST_F(StrictParserTest, CRatTheEndOfBuffer_needMoreData_OnlyDataWithCRasData) {
     EXPECT_EQ(strict_parser_crlf->parse("\"a\"\r"), ParseStatus::need_more_data);
-    EXPECT_EQ(strict_parser_crlf->move_fields(), (std::vector<std::string>{"a\r"}));
+    EXPECT_EQ(strict_parser_crlf->fields(), (std::vector<std::string>{"a\r"}));
 }
 
 // ============================================================
@@ -535,25 +516,25 @@ TEST_F(StrictParserTest, TrailingDelimiter_BeforeNewline_Completes_IncludesEmpty
 TEST_F(StrictParserTest, Buffer_SplitEmptyQuotedField) {
     EXPECT_EQ(strict_parser->parse("\""), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser->parse("\"\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser->move_fields(), (std::vector<std::string>{""}));
+    EXPECT_EQ(strict_parser->fields(), (std::vector<std::string>{""}));
 }
 
 TEST_F(StrictParserTest, Buffer_Split_EmptyQuotedField_ThenDelimiter) {
     EXPECT_EQ(strict_parser->parse("\"\""), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser->parse(",x\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser->move_fields(), (std::vector<std::string>{"", "x"}));
+    EXPECT_EQ(strict_parser->fields(), (std::vector<std::string>{"", "x"}));
 }
 
 TEST_F(StrictParserTest, Buffer_Split_AfterDelimiter_BeforeOpenQuote) {
     EXPECT_EQ(strict_parser->parse("a,"), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser->parse("\"b\"\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser->move_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(strict_parser->fields(), (std::vector<std::string>{"a","b"}));
 }
 
 TEST_F(StrictParserTest, Buffer_ClosingQuoteAtEnd_FollowedByDelimiter) {
     EXPECT_EQ(strict_parser->parse("\"a\""), ParseStatus::need_more_data);
     EXPECT_EQ(strict_parser->parse(",b\n"), ParseStatus::complete);
-    EXPECT_EQ(strict_parser->move_fields(), (std::vector<std::string>{"a","b"}));
+    EXPECT_EQ(strict_parser->fields(), (std::vector<std::string>{"a","b"}));
 }
 
 TEST_F(StrictParserTest, Strict_SpaceBeforeQuote_AfterDelimiter_Fails) {

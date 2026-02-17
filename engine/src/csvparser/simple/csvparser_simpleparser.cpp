@@ -4,7 +4,7 @@
 
 namespace csv {
 
-SimpleParser::SimpleParser(const Config& config): SimpleParserBase(config) {}
+SimpleParser::SimpleParser(const Config& config): SimpleParserBase<std::string>(config) {}
 
 void SimpleParser::remove_last_char_from_fields() {
     fields_.back().pop_back();

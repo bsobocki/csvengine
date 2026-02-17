@@ -4,7 +4,7 @@
 
 namespace csv {
 
-LenientQuotingParser::LenientQuotingParser(const Config& config): QuotingParser(config) {}
+LenientQuotingParser::LenientQuotingParser(const Config& config): QuotingParser<std::string>(config) {}
 
 ParseStatus LenientQuotingParser::parse(std::string_view buffer) {
     consumed_ = 0;
@@ -76,7 +76,7 @@ ParseStatus LenientQuotingParser::parse(std::string_view buffer) {
         pending_cr_ = false;
         if (is_newline(*buff_it)) {
             consume();
-            remove_last_saved_char();
+            remove_last_char_from_fields();
             return ParseStatus::complete;
         }
         // in other case just treat \r as data
@@ -172,6 +172,12 @@ ParseStatus LenientQuotingParser::parse(std::string_view buffer) {
     incomplete_last_read_ = true;
 
     return ParseStatus::need_more_data;
+}
+
+void LenientQuotingParser::remove_last_char_from_fields() {
+    if (!this->fields_.empty() && !this->fields_.back().empty()) {
+        this->fields_.back().pop_back();
+    }
 }
 
 }
