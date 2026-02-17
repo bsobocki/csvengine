@@ -29,7 +29,7 @@ private:
     void merge_incomplete_field(const std::string_view& field) override;
     void add_field(const std::string_view& field) override;
     void remove_last_char_from_fields() override;
-    bool has_fields() const;
+    bool has_fields() const override;
 };
 
 
@@ -38,8 +38,7 @@ public:
     explicit ViewSimpleParser(const Config& config);
 
     void shift_views(const char* buffer_start);
-    const std::vector<std::string_view>& fields() const noexcept;
-    bool has_fields() const;
+    bool has_fields() const override;
     void reset() noexcept override;
 
 private:

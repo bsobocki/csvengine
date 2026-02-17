@@ -35,10 +35,6 @@ bool ViewSimpleParser::has_fields() const {
     return !fields_.empty();
 }
 
-const std::vector<std::string_view>& ViewSimpleParser::fields() const noexcept {
-    return fields_;
-}
-
 void ViewSimpleParser::reset() noexcept {
     SimpleParserBase<std::string_view>::reset();
     fields_.clear();
