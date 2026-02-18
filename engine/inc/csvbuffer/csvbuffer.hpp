@@ -22,13 +22,13 @@ public:
     virtual ~IBuffer() = default;
 
     virtual ReadingResult refill() = 0;
-    virtual std::string_view view() const = 0;
-    virtual void consume(size_t bytes) = 0;
-    virtual size_t available() const = 0;
-    virtual size_t capacity() const = 0;
-    virtual bool empty() const = 0;
-    virtual bool eof() const = 0;
-    virtual bool good() const = 0;
+    virtual std::string_view view() const noexcept = 0;
+    virtual void consume(size_t bytes) noexcept = 0;
+    virtual size_t available() const noexcept = 0;
+    virtual size_t capacity() const noexcept = 0;
+    virtual bool empty() const noexcept = 0;
+    virtual bool eof() const noexcept = 0;
+    virtual bool good() const noexcept = 0;
     virtual bool reset() = 0;
 };
 
