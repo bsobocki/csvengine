@@ -10,7 +10,6 @@
 
 #include <csvconfig.hpp>
 #include <csvrecord/csvrecord.hpp>
-#include <csvrecord/csvrecordview.hpp>
 #include <csvbuffer/csvbuffer.hpp>
 #include <csvparser/csvparser.hpp>
 

@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <vector>
+#include <unordered_map>
 #include <charconv>
 #include <type_traits>
 #include <sstream>
@@ -12,29 +13,42 @@
 
 namespace csv {
 
-class Record {
+template <typename FieldType>
+class RecordBase {
 public:
-    Record()=default;
-    Record(const Record&) = default;
-    Record(Record&&) noexcept = default;
-    Record& operator=(const Record&) = default;
-    Record& operator=(Record&&) noexcept = default;
+    RecordBase()=default;
+    RecordBase(const RecordBase&) = default;
+    RecordBase(RecordBase&&) noexcept = default;
+    RecordBase& operator=(const RecordBase&) = default;
+    RecordBase& operator=(RecordBase&&) noexcept = default;
 
-    explicit Record(const std::vector<std::string>& fields, const std::vector<std::string>& headers = {})
-        :fields_(fields), headers_(headers) {}
+    explicit RecordBase(const std::vector<std::string>& fields, const std::vector<std::string>& headers = {})
+        :fields_(fields) {
+            init_headers(headers);
+        }
+        
+    explicit RecordBase(std::vector<std::string>&& fields, std::vector<std::string>&& headers = {})
+        :fields_(std::move(fields)) {
+            init_headers(headers);
+        }
 
-    explicit Record(std::vector<std::string>&& fields, std::vector<std::string>&& headers = {})
-        :fields_(std::move(fields)), headers_(std::move(headers)) {}
+    explicit RecordBase(const std::vector<std::string_view>& fields, const std::vector<std::string>& headers = {})
+        :fields_(fields.begin(), fields.end()) {
+            init_headers(headers);
+        }
 
-    explicit Record(const std::vector<std::string_view>& fields, const std::vector<std::string_view>& headers = {})
-        :fields_(fields.begin(), fields.end())
-        ,headers_(headers.begin(), headers.end()) {}
+    explicit RecordBase(std::vector<std::string_view>&& fields, std::vector<std::string>&& headers = {})
+        :fields_(fields.begin(), fields.end()) {
+            init_headers(headers);
+        }
+    
+    void init_headers(const std::vector<std::string>& headers) {
+        for(size_t i = 0; i < headers.size(); i++) {
+            headers_[headers[i]] = i;
+        }
+    }
 
-    explicit Record(std::vector<std::string_view>&& fields, std::vector<std::string>&& headers = {})
-        :fields_(fields.begin(), fields.end())
-        ,headers_(headers.begin(), headers.end()) {}
-
-    template<typename T = std::string>
+    template<typename T = FieldType>
     std::optional<T> get(const size_t index) const {
         if (index >= fields_.size()) {
             return std::nullopt;
@@ -42,43 +56,41 @@ public:
         return convert<T>(fields_[index]);
     }
 
-    template<typename T = std::string>
-    std::optional<T> get(std::string_view column_name) const {
-        auto it = std::find(headers_.begin(), headers_.end(), column_name);
-        if (it == headers_.end()) {
-            return std::nullopt;
+    template<typename T = FieldType>
+    std::optional<T> get(const std::string& column_name) const {
+        if (headers_.contains(column_name)) {
+            return get<T>(headers_.at(column_name));
         }
-        return get<T>(std::distance(headers_.begin(), it));
+        return std::nullopt;
     }
 
-    const std::string& at(size_t index) const {
+    const FieldType& at(size_t index) const {
         if (index >= fields_.size()) {
             throw std::out_of_range("Field index out of range");
         }
         return fields_[index];
     }
 
-    const std::string& at(std::string_view column_name) const {
-        auto it = std::find(headers_.begin(), headers_.end(), column_name);
-        if (it == headers_.end()) {
-            throw RecordColumnNameError(column_name);
+    const FieldType& at(const std::string& column_name) const {
+        if (headers_.contains(column_name)) {
+            return at(headers_.at(column_name));
         }
-        return fields_[std::distance(headers_.begin(), it)];
+        throw RecordColumnNameError(column_name);
     }
 
-    const std::string& operator[](size_t index) const noexcept {
+    const FieldType& operator[](size_t index) const noexcept {
         return fields_[index];
     }
 
-    const std::string& operator[](std::string_view column_name) const {
+    const FieldType& operator[](const std::string& column_name) const {
         return at(column_name);
     }
 
-    const std::vector<std::string>& fields() const noexcept {
+    const std::vector<FieldType>& fields() const noexcept {
         return fields_;
     }
 
-    const std::vector<std::string>& headers() const noexcept {
+    const std::unordered_map<std::string, size_t>& headers() const noexcept {
         return headers_;
     }
 
@@ -96,16 +108,19 @@ public:
 
 private:
     template<typename T>
-    std::optional<T> convert(const std::string& str) const {
-        if constexpr (std::is_convertible_v<const std::string&, T>) {
+    std::optional<T> convert(const std::string_view str) const {
+        if constexpr (std::is_convertible_v<const std::string_view&, T>) {
             return str;
+        }
+        else if constexpr (std::is_convertible_v<const std::string&, T>) {
+            return std::string(str.begin(), str.end());
         }
         else if constexpr (std::is_arithmetic_v<T>) {
             return convert_arithmetic<T>(str);
         }
         else {
             T value;
-            std::istringstream iss(str);
+            std::istringstream iss(std::string(str.begin(), str.end()));
             if (iss >> value && iss.eof()) {
                 return value;
             }
@@ -114,7 +129,7 @@ private:
     }
 
     template<typename T>
-    static std::optional<T> convert_arithmetic(const std::string& str) {
+    static std::optional<T> convert_arithmetic(const std::string_view str) {
         if (str.empty()) {
             return std::nullopt;
         }
@@ -143,8 +158,11 @@ private:
         return (conversion_end == last) ? std::optional<T>(value) : std::nullopt;
     }
 
-    std::vector<std::string> fields_;
-    std::vector<std::string> headers_;
+    std::vector<FieldType> fields_;
+    std::unordered_map<std::string, size_t> headers_;
 };
+
+using Record = RecordBase<std::string>;
+using RecordView = RecordBase<std::string_view>;
 
 }

@@ -1,4 +1,4 @@
-#include <csvrecord/csvrecordview.hpp>
+#include <csvrecord/csvrecord.hpp>
 #include <gtest/gtest.h>
 
 using namespace std;
