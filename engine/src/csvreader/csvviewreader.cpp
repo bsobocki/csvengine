@@ -57,7 +57,7 @@ bool ViewReader::next() {
         if (buffer_->empty() || need_to_compact_data) {
 
             if (consumed >= buffer_->capacity()) {
-                throw std::runtime_error("Too big field for current buffer size!");
+                throw RecordTooLargeError();
             }
 
             auto refill_result = buffer_->refill();

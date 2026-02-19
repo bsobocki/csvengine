@@ -52,4 +52,9 @@ class RecordColumnNameError : public std::runtime_error {
 public:
     RecordColumnNameError(std::string_view column_name): std::runtime_error("Column " + std::string(column_name) + " doesn't exists in record.") {}
 };
+
+class RecordTooLargeError : public std::runtime_error {
+public:
+    RecordTooLargeError(): std::runtime_error("Too big field for current buffer size!") {}
+};
 }
