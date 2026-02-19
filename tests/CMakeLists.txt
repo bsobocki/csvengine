@@ -1,7 +1,7 @@
 # Create the executable for our tests
 add_executable(run_tests
-  src/csvrecord_test.cpp
-  src/csvrecordview_test.cpp
+  src/csvrecord_tests/csvrecord_test.cpp
+  src/csvrecord_tests/csvrecordview_test.cpp
   src/csvreader_tests/csvreader_test.cpp
   src/csvreader_tests/csvviewreader_test.cpp
   src/csvparser_tests/csvparser_quoting_lenient_test.cpp
