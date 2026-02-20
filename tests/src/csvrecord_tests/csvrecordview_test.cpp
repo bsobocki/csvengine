@@ -1,7 +1,6 @@
 #include <csvrecord/csvrecord.hpp>
 #include <gtest/gtest.h>
 
-using namespace std;
 using namespace csv;
 
 using str_view_vec = std::vector<std::string_view>;

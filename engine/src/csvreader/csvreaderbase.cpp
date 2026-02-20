@@ -6,8 +6,6 @@
 #include <optional>
 #include <format>
 
-using namespace std;
-
 namespace csv {
 
 template <typename RecordType>

@@ -4,7 +4,6 @@
 #include <sstream>
 
 using namespace csv;
-using namespace std;
 
 class ViewReaderTest : public ::testing::Test {
 protected:

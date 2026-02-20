@@ -6,8 +6,6 @@
 #include <optional>
 #include <format>
 
-using namespace std;
-
 namespace csv {
 
 ViewReader::ViewReader(const std::string& filepath, const Config& config)

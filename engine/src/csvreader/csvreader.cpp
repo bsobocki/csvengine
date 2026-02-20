@@ -6,8 +6,6 @@
 #include <optional>
 #include <format>
 
-using namespace std;
-
 namespace csv {
 
 Reader::Reader(const std::string& filepath, const Config& config)
