@@ -111,7 +111,7 @@ public:
     [[nodiscard]] bool next() override;
 
 private:
-    std::unique_ptr<Parser<std::string_view>> parser_;
+    std::unique_ptr<ViewParser> parser_;
 };
 
 }
