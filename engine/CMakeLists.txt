@@ -1,9 +1,11 @@
 add_library(csvengine
     src/csvparser/csvparser.cpp
-    src/csvparser/simple/csvparser_simpleparserbase.cpp
     src/csvparser/simple/csvparser_simpleparser.cpp
+    src/csvparser/simple/csvparser_simpleparserbase.cpp
     src/csvparser/simple/csvparser_simdparser.cpp
+    src/csvparser/simple/csvparser_simdparserbase.cpp
     src/csvparser/simple/csvviewparser_simpleparser.cpp
+    src/csvparser/simple/csvviewparser_simdparser.cpp
     src/csvparser/quoting/csvparser_strictquotingparser.cpp
     src/csvparser/quoting/csvparser_lenientquotingparser.cpp
     src/csvreader/csvreader.cpp

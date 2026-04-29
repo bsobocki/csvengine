@@ -2,6 +2,7 @@
 #include <cstring>
 #include <csvparser/csvparser.hpp>
 #include <algorithm>
+#include <csverrors.hpp>
 
 namespace csv {
 
@@ -69,8 +70,27 @@ std::unique_ptr<Parser<std::string>> make_parser(const Config& config) {
         }
         return std::make_unique<LenientQuotingParser>(config);
     }
+#if defined(__SSE2__)
+    if (config.use_simd) {
+        return std::make_unique<SimdParser>(config);
+    }
+#endif
     return std::make_unique<SimpleParser>(config);
 }
+
+std::unique_ptr<ViewParser> make_view_parser(const Config& config) {
+    if (config.has_quoting) {
+        throw ConfigError("Zero-copy ViewReader does not support quoted CSV files yet.");
+    }
+
+#if defined(__SSE2__)
+    if (config.use_simd) {
+        return std::make_unique<ViewSimdParser>(config);
+    }
+#endif
+    return std::make_unique<ViewSimpleParser>(config);
+}
+
 
 template class ParserBase<std::string>;
 template class ParserBase<std::string_view>;

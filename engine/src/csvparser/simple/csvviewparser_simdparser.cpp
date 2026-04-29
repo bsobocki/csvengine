@@ -1,0 +1,47 @@
+#include <iostream>
+#include <csvparser/csvparser.hpp>
+#include <cstring>
+
+#if defined(__SSE2__)
+
+namespace csv {
+
+ViewSimdParser::ViewSimdParser(const Config& config): SimdParserBase<std::string_view>(config) {}
+
+void ViewSimdParser::remove_last_char_from_fields() {
+    fields_.back().remove_suffix(1);
+}
+
+// contract: after ParseStatus::need_more_data methods parse and inser_fields must be called after adjust_fields !
+void ViewSimdParser::merge_incomplete_field(const std::string_view& field) {
+    auto new_size = fields_.back().size() + field.size();
+    fields_.back() = std::string_view(fields_.back().data(), new_size);
+}
+
+void ViewSimdParser::add_field(const std::string_view& field) {
+    fields_.push_back(field);
+}
+
+void ViewSimdParser::shift_views(const char* new_buffer_start) {
+    if (fields_.empty()) return;
+
+    auto old_fields_data_start = fields_[0].data();
+
+    for (auto& field : fields_) {
+        auto offset = field.data() - old_fields_data_start;
+        field = std::string_view(new_buffer_start + offset, field.size());
+    }
+}
+
+bool ViewSimdParser::has_fields() const {
+    return !fields_.empty();
+}
+
+void ViewSimdParser::reset() noexcept {
+    SimdParserBase<std::string_view>::reset();
+    fields_.clear();
+}
+
+}
+
+#endif

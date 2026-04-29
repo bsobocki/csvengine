@@ -11,6 +11,8 @@ struct Config {
     bool streaming = true;
     bool mapped_buffer = false;
 
+    bool use_simd = false;
+
     enum class ParseMode { strict, lenient };
     ParseMode parse_mode = ParseMode::strict;
 

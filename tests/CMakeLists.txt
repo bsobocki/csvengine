@@ -7,6 +7,7 @@ add_executable(run_tests
   src/csvparser_tests/csvparser_quoting_lenient_test.cpp
   src/csvparser_tests/csvparser_quoting_strict_test.cpp
   src/csvparser_tests/csvparser_simple_test.cpp
+  src/csvparser_tests/csvparser_simd_test.cpp
   src/csvbuffer_tests/csvstreambuffer_test.cpp
   src/csvbuffer_tests/csvmappedbuffer_test.cpp
 )

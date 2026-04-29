@@ -58,5 +58,6 @@ template <typename FieldType>
 using Parser = typename ParserTypeSelector<FieldType>::type;
 
 std::unique_ptr<Parser<std::string>> make_parser(const Config& config);
+std::unique_ptr<Parser<std::string_view>> make_view_parser(const Config& config);
 
 }
