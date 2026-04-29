@@ -9,6 +9,7 @@ class ViewReaderTest : public ::testing::Test {
 protected:
     template <size_t N>
     ViewReader createReader(const std::string& data, Config cfg = {}) {
+        cfg.has_quoting = false; // view parser supports only simple data !!
         auto stream = std::make_unique<std::stringstream>(data);
         auto buffer = std::make_unique<StreamBuffer<N>>(std::move(stream));
         return ViewReader(std::move(buffer), cfg);
