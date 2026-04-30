@@ -47,6 +47,15 @@ static void BM_SimpleData_ParserComparison_SimpleParser(benchmark::State& state)
     };
     BM_ParserComparison_TestBody(state, cfg, simple_csv_data);
 }
+static void BM_SimpleData_ParserComparison_SimdParser(benchmark::State& state) {
+    Config cfg{
+        .has_header = true,
+        .has_quoting = false,
+        .use_simd = true,
+        .line_ending = Config::LineEnding::lf,
+    };
+    BM_ParserComparison_TestBody(state, cfg, simple_csv_data);
+}
 static void BM_SimpleData_ParserComparison_StrictParser(benchmark::State& state) {
     Config cfg{
         .has_header = true,
@@ -66,14 +75,17 @@ static void BM_SimpleData_ParserComparison_LenientParser(benchmark::State& state
     BM_ParserComparison_TestBody(state, cfg, simple_csv_data);
 }
 BENCHMARK(BM_SimpleData_ParserComparison_SimpleParser)->Arg(small_data)->Iterations(iterations);
+BENCHMARK(BM_SimpleData_ParserComparison_SimdParser)->Arg(small_data)->Iterations(iterations);
 BENCHMARK(BM_SimpleData_ParserComparison_StrictParser)->Arg(small_data)->Iterations(iterations);
 BENCHMARK(BM_SimpleData_ParserComparison_LenientParser)->Arg(small_data)->Iterations(iterations);
 
 BENCHMARK(BM_SimpleData_ParserComparison_SimpleParser)->Arg(medium_data)->Iterations(iterations);
+BENCHMARK(BM_SimpleData_ParserComparison_SimdParser)->Arg(medium_data)->Iterations(iterations);
 BENCHMARK(BM_SimpleData_ParserComparison_StrictParser)->Arg(medium_data)->Iterations(iterations);
 BENCHMARK(BM_SimpleData_ParserComparison_LenientParser)->Arg(medium_data)->Iterations(iterations);
 
 BENCHMARK(BM_SimpleData_ParserComparison_SimpleParser)->Arg(big_data)->Iterations(iterations);
+BENCHMARK(BM_SimpleData_ParserComparison_SimdParser)->Arg(big_data)->Iterations(iterations);
 BENCHMARK(BM_SimpleData_ParserComparison_StrictParser)->Arg(big_data)->Iterations(iterations);
 BENCHMARK(BM_SimpleData_ParserComparison_LenientParser)->Arg(big_data)->Iterations(iterations);
 

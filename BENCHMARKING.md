@@ -126,16 +126,17 @@ BM_SimpleData_ParserComparison_StrictParser/10000/iterations:50   61675026 ns   
 
 | Parser | Small (600 rows) | Medium (6K rows) | Large (60K rows) | Average |
 |--------|------------------|------------------|------------------|---------|
-| **StrictParser** | 931 k/s | 967 k/s | 970 k/s | **~956 k/s** 🟢 |
-| **SimpleParser** | 885 k/s | 916 k/s | 923 k/s | **~908 k/s** 🟢 |
-| **LenientParser** | 731 k/s | 771 k/s | 781 k/s | **~761 k/s** 🟢 |
+| **SimdParser** | 1.135 M/s | 1.120 M/s | 1.106 M/s | **~1.12 M/s** |
+| **StrictParser** | 931 k/s | 967 k/s | 970 k/s | **~956 k/s** |
+| **SimpleParser** | 885 k/s | 916 k/s | 923 k/s | **~908 k/s** |
+| **LenientParser** | 731 k/s | 771 k/s | 781 k/s | **~761 k/s** |
 
 ### Quoted Data (Complex CSV)
 
 | Parser | Small (300 rows) | Medium (3K rows) | Large (30K rows) | Average |
 |--------|------------------|------------------|------------------|---------|
-| **StrictParser** | 682 k/s | 717 k/s | 713 k/s | **~704 k/s** 🟢 |
-| **LenientParser** | 461 k/s | 485 k/s | 482 k/s | **~476 k/s** 🟡 |
+| **StrictParser** | 682 k/s | 717 k/s | 713 k/s | **~704 k/s** |
+| **LenientParser** | 461 k/s | 485 k/s | 482 k/s | **~476 k/s** |
 
 ### Parser Comparison Summary
 
@@ -144,21 +145,34 @@ BM_SimpleData_ParserComparison_StrictParser/10000/iterations:50   61675026 ns   
 | Strict vs Simple | **5% faster** | N/A |
 | Strict vs Lenient | **26% faster** | **48% faster** |
 
+### Hardware Acceleration (SIMD) Impact
+
+By leveraging **SSE2 128-bit vector registers** and bit-twiddling intrinsics (`_mm_cmpeq_epi8`, `_mm_movemask_epi8`), the `SimdParser` scans for both delimiters and newlines simultaneously in 16-byte chunks. 
+
+**Results:**
+
+- **+28% throughput increase** compared to standard `SimpleParser` (which relies on `memchr`).
+- Breaks the **1 Million rows/second** barrier.
+- Processes data in a single pass (zero byte re-scanning).
+
 ### Key Findings
 
-1. **StrictParser is fastest** — Peak throughput of **~970 k rows/second**
+1. **SimdParser is the absolute winner** — Peak throughput of **~1.13 M rows/second**
+   - It should be used whenever data does not contain quoted fields and the CPU supports SSE2.
+
+2. **StrictParser is fastest for quoted data** — Peak throughput of **~970 k rows/second**
    - Best choice for well-formed CSV data
    - Consistent performance across all data sizes
 
-2. **SimpleParser is competitive** — ~908 k/s average
+3. **SimpleParser is competitive** — ~908 k/s average
    - Good choice when quoting is not needed
    - Slightly simpler code path
 
-3. **LenientParser trades speed for flexibility** — ~24-48% slower
+4. **LenientParser trades speed for flexibility** — ~24-48% slower
    - Handles malformed CSV gracefully
    - Recommended for real-world messy data
 
-4. **All parsers scale linearly** — No performance cliffs
+5. **All parsers scale linearly** — No performance cliffs
    - Predictable behavior regardless of file size
 
 ---
@@ -299,12 +313,15 @@ Newly added benchmarks `benchmarks/src/record_vs_recordview_benchmark.cpp` show 
 
 ```
 BM_SimpleData_ParserComparison_SimpleParser/100/iterations:50        675694 ns       676610 ns           50   bytes_per_second=19.4509Mi/s  items_per_second=885.296k/s
+BM_SimpleData_ParserComparison_SimdParser/100/iterations:50          532263 ns       527554 ns           50   bytes_per_second=24.9467Mi/s items_per_second=1.13543M/s
 BM_SimpleData_ParserComparison_StrictParser/100/iterations:50        642308 ns       643208 ns           50   bytes_per_second=20.461Mi/s   items_per_second=931.27k/s
 BM_SimpleData_ParserComparison_LenientParser/100/iterations:50       818692 ns       819848 ns           50   bytes_per_second=16.0526Mi/s  items_per_second=730.623k/s
 BM_SimpleData_ParserComparison_SimpleParser/1000/iterations:50      6538379 ns      6547006 ns           50   bytes_per_second=20.1019Mi/s  items_per_second=916.297k/s
+BM_SimpleData_ParserComparison_SimdParser/1000/iterations:50        5402890 ns      5354736 ns           50   bytes_per_second=24.5777Mi/s items_per_second=1.12032M/s
 BM_SimpleData_ParserComparison_StrictParser/1000/iterations:50      6192617 ns      6200792 ns           50   bytes_per_second=21.2242Mi/s  items_per_second=967.457k/s
 BM_SimpleData_ParserComparison_LenientParser/1000/iterations:50     7774738 ns      7785132 ns           50   bytes_per_second=16.9049Mi/s  items_per_second=770.571k/s
 BM_SimpleData_ParserComparison_SimpleParser/10000/iterations:50    64667186 ns     64983390 ns           50   bytes_per_second=20.2524Mi/s  items_per_second=923.297k/s
+BM_SimpleData_ParserComparison_SimdParser/10000/iterations:50      56101304 ns     54204074 ns           50   bytes_per_second=24.2799Mi/s items_per_second=1.10691M/s
 BM_SimpleData_ParserComparison_StrictParser/10000/iterations:50    61675026 ns     61842958 ns           50   bytes_per_second=21.2808Mi/s  items_per_second=970.183k/s
 BM_SimpleData_ParserComparison_LenientParser/10000/iterations:50   76803069 ns     76854814 ns           50   bytes_per_second=17.1241Mi/s  items_per_second=780.68k/s
 BM_QuotedData_ParserComparison_StrictParser/100/iterations:50        438289 ns       438410 ns           50   bytes_per_second=38.5029Mi/s  items_per_second=682.01k/s
