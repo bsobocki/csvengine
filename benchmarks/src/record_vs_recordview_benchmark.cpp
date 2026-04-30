@@ -56,13 +56,39 @@ static void BM_RecordComparison_RecordView_SimpleParser(benchmark::State& state)
     BM_RecordComparison_TestBody<ViewReader>(state, cfg, simple_csv_data);
 }
 
+static void BM_RecordComparison_Record_SimdParser(benchmark::State& state) {
+    Config cfg{
+        .has_header = true,
+        .has_quoting = false,
+        .use_simd = true,
+        .line_ending = Config::LineEnding::lf,
+    };
+    BM_RecordComparison_TestBody<Reader>(state, cfg, simple_csv_data);
+}
+
+static void BM_RecordComparison_RecordView_SimdParser(benchmark::State& state) {
+    Config cfg{
+        .has_header = true,
+        .has_quoting = false,
+        .use_simd = true,
+        .line_ending = Config::LineEnding::lf,
+    };
+    BM_RecordComparison_TestBody<ViewReader>(state, cfg, simple_csv_data);
+}
+
 BENCHMARK(BM_RecordComparison_Record_SimpleParser)->Arg(small_data)->Iterations(iterations);
 BENCHMARK(BM_RecordComparison_RecordView_SimpleParser)->Arg(small_data)->Iterations(iterations);
+BENCHMARK(BM_RecordComparison_Record_SimdParser)->Arg(small_data)->Iterations(iterations);
+BENCHMARK(BM_RecordComparison_RecordView_SimdParser)->Arg(small_data)->Iterations(iterations);
 
 BENCHMARK(BM_RecordComparison_Record_SimpleParser)->Arg(medium_data)->Iterations(iterations);
 BENCHMARK(BM_RecordComparison_RecordView_SimpleParser)->Arg(medium_data)->Iterations(iterations);
+BENCHMARK(BM_RecordComparison_Record_SimdParser)->Arg(medium_data)->Iterations(iterations);
+BENCHMARK(BM_RecordComparison_RecordView_SimdParser)->Arg(medium_data)->Iterations(iterations);
 
 BENCHMARK(BM_RecordComparison_Record_SimpleParser)->Arg(big_data)->Iterations(iterations);
 BENCHMARK(BM_RecordComparison_RecordView_SimpleParser)->Arg(big_data)->Iterations(iterations);
+BENCHMARK(BM_RecordComparison_Record_SimdParser)->Arg(big_data)->Iterations(iterations);
+BENCHMARK(BM_RecordComparison_RecordView_SimdParser)->Arg(big_data)->Iterations(iterations);
 
 }

@@ -280,15 +280,10 @@ Newly added benchmarks `benchmarks/src/record_vs_recordview_benchmark.cpp` show 
     time**, freeing up the processor for other threads.
 
 
-## Recommendations
+### Key Findings
 
-| Use Case | Recommended Configuration |
-|----------|---------------------------|
-| Clean, well-formed CSV | `StrictParser` + 2-4 KB buffer |
-| Simple CSV without quotes | `SimpleParser` + default buffer |
-| Real-world messy data | `LenientParser` (~48% slower) |
-| Memory-constrained | 256-byte buffer (~1.5% slower) |
-| Maximum throughput | `StrictParser` + 2 KB buffer |
+Additionally, I added SIMD parser into this benchmark to find the fastest solution for simple data.
+`SimdParser + ViewReader` can achieve speed: **`1.73759M/s`**!.
 
 ---
 
@@ -393,11 +388,17 @@ BuffersComparisonQuotedDataFixture/StreamBuffer_Quoted/1000000   7013641018 ns  
 BuffersComparisonQuotedDataFixture/MappedBuffer_Quoted/1000000   7742541476 ns   4239692600 ns            1   bytes_per_second=39.8143Mi/s  items_per_second=707.598k/s
 
 BM_RecordComparison_Record_SimpleParser/100/iterations:50            985575 ns       961864 ns           50   bytes_per_second=13.6825Mi/s items_per_second=622.749k/s
+BM_RecordComparison_Record_SimdParser/100/iterations:50              731279 ns       718670 ns           50   bytes_per_second=18.3126Mi/s items_per_second=833.484k/s
 BM_RecordComparison_RecordView_SimpleParser/100/iterations:50        452801 ns       443938 ns           50   bytes_per_second=29.6454Mi/s items_per_second=1.34929M/s
+BM_RecordComparison_RecordView_SimdParser/100/iterations:50          360876 ns       354686 ns           50   bytes_per_second=37.1052Mi/s items_per_second=1.68882M/s
 BM_RecordComparison_Record_SimpleParser/1000/iterations:50          8551974 ns      8383284 ns           50   bytes_per_second=15.6987Mi/s items_per_second=715.591k/s
+BM_RecordComparison_Record_SimdParser/1000/iterations:50            7052850 ns      6930584 ns           50   bytes_per_second=18.9893Mi/s items_per_second=865.584k/s
 BM_RecordComparison_RecordView_SimpleParser/1000/iterations:50      4480063 ns      4391690 ns           50   bytes_per_second=29.9673Mi/s items_per_second=1.36599M/s
+BM_RecordComparison_RecordView_SimdParser/1000/iterations:50        3574576 ns      3512616 ns           50   bytes_per_second=37.467Mi/s items_per_second=1.70784M/s
 BM_RecordComparison_Record_SimpleParser/10000/iterations:50        85248120 ns     83534894 ns           50   bytes_per_second=15.7547Mi/s items_per_second=718.251k/s
+BM_RecordComparison_Record_SimdParser/10000/iterations:50          69946617 ns     68700856 ns           50   bytes_per_second=19.1565Mi/s items_per_second=873.337k/s
 BM_RecordComparison_RecordView_SimpleParser/10000/iterations:50    44447092 ns     43544062 ns           50   bytes_per_second=30.2239Mi/s items_per_second=1.37789M/s
+BM_RecordComparison_RecordView_SimdParser/10000/iterations:50      35139607 ns     34530002 ns           50   bytes_per_second=38.1138Mi/s items_per_second=1.73759M/s
 ```
 
 <details>
