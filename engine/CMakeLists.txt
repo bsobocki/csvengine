@@ -19,3 +19,9 @@ target_include_directories(csvengine
   PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
+
+include(CheckCXXCompilerFlag)
+check_cxx_compiler_flag("-msse2" COMPILER_SUPPORTS_SSE2)
+if(COMPILER_SUPPORTS_SSE2)
+    target_compile_options(csvengine PRIVATE -msse2)
+endif()
