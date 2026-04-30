@@ -16,6 +16,8 @@
 
 `csvengine` is a modern C++ library designed to parse RFC 4180 compliant CSV files efficiently. It focuses on low memory usage (streaming mode), ease of integration, and type safety via `std::optional` and C++20 concepts.
 
+The architecture is designed as a balanced trade-off between **Clean Code / OOP principles** and **High Performance**. It utilizes **SIMD (SSE2)**, **Memory Mapping**, and **zero-copy string views** to achieve **>1 Million rows/sec** throughput, while keeping the API fully object-oriented and extensible via virtual polymorphism."
+
 ## Table of Contents
 - [Features](#features)
 - [Performance Benchmarks](#performance-benchmarks)
