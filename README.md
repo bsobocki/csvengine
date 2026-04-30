@@ -1,4 +1,3 @@
-
 <p align="center">
 <img src="docs/logo.png" height="200"/>
 </p>
@@ -10,13 +9,11 @@
 ![Platform](https://img.shields.io/badge/platform-Linux-lightgrey)
 ![Status](https://img.shields.io/badge/status-Alpha%20%2F%20Under%20Development-yellow)
 
-
 **High-performance C++20 CSV parser with streaming and type-safe conversions.**
-
 
 `csvengine` is a modern C++ library designed to parse RFC 4180 compliant CSV files efficiently. It focuses on low memory usage (streaming mode), ease of integration, and type safety via `std::optional` and C++20 concepts.
 
-The architecture is designed as a balanced trade-off between **Clean Code / OOP principles** and **High Performance**. It utilizes **SIMD (SSE2)**, **Memory Mapping**, and **zero-copy string views** to achieve **>1 Million rows/sec** throughput, while keeping the API fully object-oriented and extensible via virtual polymorphism."
+The architecture is designed as a balanced trade-off between **Clean Code / OOP principles** and **High Performance**. It utilizes SIMD (SSE2) intrinsics, Memory Mapping (mmap), and zero-copy string views to achieve >1.7 Million rows/sec throughput, while keeping the API fully object-oriented and extensible.
 
 ## Table of Contents
 - [Features](#features)
@@ -33,25 +30,27 @@ The architecture is designed as a balanced trade-off between **Clean Code / OOP 
 - [Roadmap](#roadmap)
 - [License](#license)
 
-
 ## Features
 
 | Feature | Description |
 |---------|-------------|
 | **RFC 4180 Compliant** | Full support for quoted fields, embedded newlines, escaped quotes |
-| **Streaming Architecture** | $O(\text{record.size()})$ memory usage - parse multi-GB files with constant RAM |
-| **Type-Safe Conversions** | `row.get<T>("age")` returns `std::optional<T>` (int, double, string, etc.) |
-| **Modern C++20** | Concepts, `string_view`, `from_chars`, ranges-compatible iterators |
+| **Hardware Acceleration** | SIMD (SSE2) structural scanning for massive throughput gains |
+| **Streaming & Mmap** | Constant $O(\text{record.size()})$ memory usage + OS page caching (`mmap`) |
+| **Zero-Copy Parsing** | `RecordView` utilizing `std::string_view` to eliminate memory allocations |
+| **Type-Safe Conversions** | `row.get<T>("age")` returns `std::optional<T>` (using C++17 `from_chars`) |
+| **Modern C++20** | Concepts, `string_view`, ranges-compatible iterators |
 | **Flexible Access** | Access fields by index `row[0]` or column name `row["name"]` |
 | **Configurable** | Custom delimiters, quote chars, line endings (LF/CRLF/CR) |
 | **Strict & Lenient Modes** | Choose between RFC-strict parsing or forgiving real-world mode |
 | **Zero Dependencies** | Only standard library (GoogleTest/Benchmark for development) |
 
-
 ## Performance Benchmarks
 
-For information about performance please read [BENCHMARKING.md](./BENCHMARKING.md)
+For detailed information about performance analysis, buffer tuning, and the impact of SIMD and Zero-Copy, please read [BENCHMARKING.md](./BENCHMARKING.md).
 
+**Peak Performance Highlight:**  
+Combining the `SimdParser` with `RecordView` (Zero-Copy) and Memory Mapped files (`MappedBuffer`) yields parsing speeds exceeding **1.73 Million rows per second** (~38 MB/s) on standard laptop hardware.
 
 ## Requirements
 
@@ -62,8 +61,7 @@ For information about performance please read [BENCHMARKING.md](./BENCHMARKING.m
     *   MSVC 2022+
 *   **Build System:** CMake 3.20 or higher.
 *   **Dependencies:**
-    *   **GoogleTest:** Automatically fetched via CMake for unit testing.
-
+    *   **GoogleTest/Benchmark:** Automatically fetched via CMake for unit testing and profiling.
 
 ## Quick Start
 
@@ -79,7 +77,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(csvengine)
 
-target_link_libraries(your_app PRIVATE csvengine)
+target_link_libraries(your_app PRIVATE csvengine::csvengine)
 ```
 
 #### Option 2: Git Submodule
@@ -88,12 +86,8 @@ git submodule add https://github.com/bsobocki/csvengine.git external/csvengine
 ```
 ```cmake
 add_subdirectory(external/csvengine)
-target_link_libraries(your_app PRIVATE csvengine)
+target_link_libraries(your_app PRIVATE csvengine::csvengine)
 ```
-
-#### Option 3: Header Include
-Copy `engine/inc/` to your project and include directly.
-
 
 ## Building the Project
 
@@ -129,14 +123,14 @@ cd csvengine
 
 ## API Reference
 
-### `csv::Reader`
+### `csv::Reader` and `csv::ViewReader`
 
 | Method | Description |
 |--------|-------------|
-| `Reader(path, config)` | Construct from file path |
-| `Reader(stream, config)` | Construct from `std::istream` |
+| `Reader(path, config)` | Construct from file path (standard `std::string` fields) |
+| `ViewReader(path, config)` | Construct Zero-Copy reader (`std::string_view` fields) |
 | `next()` | Advance to next record, returns `false` at EOF |
-| `current_record()` | Get current `Record` reference |
+| `current_record()` | Get current `Record` or `RecordView` reference |
 | `headers()` | Get column names (if `has_header=true`) |
 | `line_number()` | Current line number (1-indexed) |
 | `record_size()` | Number of fields per record |
@@ -153,7 +147,7 @@ cd csvengine
 | `at(name)` | Get field by name, throws if not found |
 | `operator[](index)` | Direct access by index (no bounds check) |
 | `operator[](name)` | Direct access by name (throws if not found) |
-| `fields()` | Get all fields as `vector<string>` |
+| `fields()` | Get all fields as vector |
 | `size()` | Number of fields |
 | `empty()` | Check if record has no fields |
 
@@ -165,6 +159,8 @@ cd csvengine
 | `has_header` | `bool` | `true` | First row contains column names |
 | `has_quoting` | `bool` | `true` | Enable quoted field parsing |
 | `quote_char` | `char` | `"` | Quote character |
+| `use_simd` | `bool` | `false` | Enable SSE2 hardware acceleration (unquoted only) |
+| `mapped_buffer` | `bool` | `false` | Use `mmap` instead of `std::ifstream` |
 | `parse_mode` | `ParseMode` | `strict` | `strict` or `lenient` |
 | `line_ending` | `LineEnding` | `lf` | `lf`, `crlf`, or `cr` |
 | `record_size_policy` | `RecordSizePolicy` | `strict_to_first` | Field count validation |
@@ -182,20 +178,30 @@ cd csvengine
 
 ## Usage Examples
 
-### 1. Basic Iteration
-Read a file row by row using C++ range-based for loops.
+### 1. Zero-Copy High-Performance Iteration
+Read a file with maximum throughput using memory mapping and SIMD parsing.
 
 ```cpp
 #include <csvengine.hpp>
 #include <iostream>
 
 int main() {
+    csv::Config config{
+        .has_header = true,
+        .has_quoting = false,        // Required for SIMD
+        .use_simd = true,            // Enable SSE2 parsing
+        .mapped_buffer = true        // Use Memory-Mapped I/O
+    };
+
     try {
-        csv::Reader reader("data.csv"); // Defaults: comma delimiter, has header
+        // ViewReader returns RecordView (std::string_view)
+        csv::ViewReader reader("massive_data.csv", config); 
 
         for (const auto& record : reader) {
-            // Access raw string_view by index
-            std::cout << "Field 0: " << record[0] << "\n";
+            auto id = record.get<int>(0);
+            if (id && *id > 1000) {
+                std::cout << "Target found: " << record[1] << "\n";
+            }
         }
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";
@@ -210,7 +216,7 @@ Access data safely using types and header names.
 csv::Reader reader("employees.csv");
 
 for (const auto& record : reader) {
-    // get<T> returns std::optional<T>
+    // get<T> returns std::optional<T> utilizing fast std::from_chars
     auto name = record.get<std::string>("name");
     auto age  = record.get<int>("age");
     auto salary = record.get<double>("salary");
@@ -222,32 +228,25 @@ for (const auto& record : reader) {
 ```
 
 ### 3. Custom Configuration
-Handle TSV files or files without headers.
+Handle TSV files or files without headers using Lenient mode.
 
 ```cpp
 csv::Config config{
-    .delimiter = ';',                                    // Semicolon-separated
+    .delimiter = '\t',                                   // Tab-separated
     .has_header = false,
     .has_quoting = true,
     .quote_char = '"',
-    .parse_mode = csv::Config::ParseMode::lenient,       // Forgiving mode
+    .parse_mode = csv::Config::ParseMode::lenient,       // Forgiving parsing
     .line_ending = csv::Config::LineEnding::crlf,        // Windows line endings
-    .record_size_policy = csv::Config::RecordSizePolicy::strict_to_header
+    .record_size_policy = csv::Config::RecordSizePolicy::flexible
 };
 
 csv::Reader reader("data.tsv", config);
 
 for (const auto& record : reader) {
-    // Since there are no headers, access by index
     auto id = record.get<int>(0);
 }
 ```
-
-
-### Compile Options
-
-The library is configured with strict warning flags (`-Wall -Wextra -Wpedantic`) during development to ensure code quality.
-
 
 ## Building from Source
 
@@ -290,14 +289,13 @@ ctest --output-on-failure
 
 ## Testing
 
-The project currently includes **300+ unit tests** covering:
+The project includes **over 300 unit tests** ensuring enterprise-grade stability. It covers:
 
-- Basic parsing (simple fields, empty fields)
-- Quoting (escaped quotes, embedded delimiters, newlines in fields)
-- Buffer management (partial reads, boundary conditions)
-- Line endings (LF, CRLF, CR)
-- Error handling (malformed input, configuration errors)
-- Type conversions (integers, floats, strings)
+- RFC 4180 parsing logic and state machines
+- Edge cases in quoted/escaped text and embedded delimiters
+- Hardware architecture fallback mechanisms
+- Buffer shifting and string_view memory safety logic
+- Exception handling and typed data conversion
 
 ```bash
 # Run all tests
@@ -305,17 +303,11 @@ The project currently includes **300+ unit tests** covering:
 
 # Run specific test
 ./go.sh run_tests StrictParser
-
-# Run with verbose output
-cd build && ctest --output-on-failure --verbose
-
-# Run specific test manually
-./build/tests/run_tests --gtest_filter="StrictParserTest.*"
 ```
 
 ## Benchmarks
 
-The project currently contains several different benchmark tests.\
+The project contains a heavily configured benchmarking suite utilizing Google Benchmark.
 You can run them using:
 ```bash
 ./go.sh benchmarks
@@ -323,7 +315,6 @@ You can run them using:
 If you want to have detailed result summary in JSON or CSV formats you can just add format name as the next argument.
 ```bash
 ./go.sh benchmarks csv
-
 ./go.sh benchmarks json
 ```
 
@@ -347,71 +338,17 @@ csvengine/
 │
 ├── engine/                     # Core library
 │   ├── CMakeLists.txt
-|   |
 │   ├── inc/                    # Public headers
-│   │   ├── csvbuffer/
-│   │   │   ├── csvbuffer.hpp         # I/O Buffer interface declaration
-│   │   │   ├── csvmappedbuffer.hpp   # Buffer as mapped file
-│   │   │   └── csvstreambuffer.hpp   # Chunk based buffer
-│   │   │
-│   │   ├── csvengine.hpp       # Main include
-│   │   ├── csvreader.hpp       # Reader class
-│   │   ├── csvrecord.hpp       # Record class
-│   │   ├── csvconfig.hpp       # Configuration
-│   │   ├── csvparser.hpp       # Parser interface
-│   │   └── csverrors.hpp       # Exception types
-│   │
-│   └── src/                    # Implementation
-│       ├── csvreader.cpp
-│       ├── csvparser.cpp
-│       ├── csvmappedbuffer.cpp
-│       ├── csvparser_simple_parser.cpp
-│       ├── csvparser_quoting_strict_parser.cpp
-│       └── csvparser_quoting_lenient_parser.cpp
+│   │   ├── csvbuffer/          # Buffer management (mmap, streams)
+│   │   ├── csvparser/          # Parse logic (SIMD, Strict, Lenient)
+│   │   ├── csvreader/          # Stream reading logic
+│   │   └── csvrecord/          # Record & Data conversion
+│   └── src/                    # Internal implementation
 │
-├── tests/                      # Unit tests
-│   ├── CMakeLists.txt
-|   |
-│   ├── src/
-|   |   ├── csvbuffer_tests/
-|   |   |   ├── csvmappedbuffer_test.cpp
-|   |   |   └── csvstreambuffer_test.cpp
-|   |   |
-│   │   ├── csvparser_tests/
-|   |   |   ├── csvparser_simple_test.cpp
-|   |   |   ├── csvparser_quoting_strict_test.cpp
-|   |   |   └── csvparser_quoting_lenient_test.cpp
-|   |   |
-│   │   ├── csvreader_test.cpp
-│   │   └── csvrecord_test.cpp
-|   |
-│   ├── mocks/
-│   │   └── csvbuffer_mock.hpp
-|   |
-│   └── test_data/
-│       ├── simple_file.csv
-│       ├── quoting.csv
-│       └── testdata.hpp
-│
-├── benchmarks/                 # Performance benchmarks
-│   ├── CMakeLists.txt
-|   |
-│   ├── inc/
-│   |   └── helpers.hpp         # helper functions definitions
-|   | 
-│   └── src/
-│       ├── helpers.cpp
-│       ├── buffers_comparison_benchmark.cpp
-│       ├── parser_benchmark.cpp
-│       ├── reader_benchmark.cpp
-│       └── streambuffer_benchmark.cpp
-│
+├── tests/                      # Unit tests (GTest)
+├── benchmarks/                 # Performance profiling (GBenchmark)
 ├── demo/                       # Example application
-│   ├── CMakeLists.txt
-│   └── main.cpp
-│
 └── docs/                       # Documentation assets
-    └── logo.png
 ```
 
 ## Roadmap
@@ -419,14 +356,14 @@ csvengine/
 ### Version 1.0 (Current)
 - [x] RFC 4180 compliant parsing
 - [x] Streaming architecture
-- [x] Type-safe field access
-- [x] Configurable delimiters and line endings
+- [x] Zero-copy parsing capability
+- [x] Memory-mapped file I/O
+- [x] Hardware acceleration via SIMD (SSE2)
+- [x] Type-safe field access (`std::from_chars`)
 - [x] Strict and lenient parsing modes
-- [x] Comprehensive test suite
-- [x] Performance benchmarks
+- [x] Comprehensive benchmark & test suite
 
 ### Version 1.1 (Planned)
-- [x] Memory-mapped file I/O for improved performance
 - [ ] Schema validation with custom rules
 - [ ] Column-wise iteration
 - [ ] Statistics during parsing (min/max/count)
@@ -434,12 +371,10 @@ csvengine/
 
 ### Future
 - [ ] In-memory database mode with random access
+- [ ] Static schema projection (CRTP / Compile-time optimizations)
 - [ ] CSV writing support
 - [ ] Compressed file support (gzip)
 - [ ] Multi-threaded chunk-based parsing
-- [ ] Unicode support (UTF-8, UTF-16)
-
-
 
 ## License
 
