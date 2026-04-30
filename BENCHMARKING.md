@@ -84,14 +84,6 @@ BM_SimpleData_ParserComparison_StrictParser/10000/iterations:50   61675026 ns   
 | **ns** | Nanoseconds | `6192000 ns` = 6192 μs |
 | **Mi/s** | Mebibytes per second | `21 Mi/s` ≈ 22 MB/s |
 
-### Performance Rating
-
-| Throughput | Rating | Description |
-|------------|--------|-------------|
-| > 500 k/s | 🟢 **Fast** | Excellent performance |
-| 100 - 500 k/s | 🟡 **Acceptable** | Good for most use cases |
-| < 100 k/s | 🔴 **Slow** | May need optimization |
-
 ---
 
 ## Test Configuration
@@ -237,8 +229,8 @@ Testing different internal buffer sizes to find optimal configuration.
 
 | Metric | Value |
 |--------|-------|
-| **Peak row throughput** | ~970 k rows/sec |
-| **Peak byte throughput** | ~21 Mi/s (~22 MB/s) |
+| **Peak row throughput** | ~1.73 M rows/sec |
+| **Peak byte throughput** | ~38 Mi/s (~40 MB/s) |
 | **Quoted data overhead** | ~26% slower |
 | **Lenient mode overhead** | ~24-48% slower |
 
@@ -261,29 +253,35 @@ Newly added benchmarks `benchmarks/src/buffers_comparison_benchmark.cpp` shows t
 | **Huge (132 MB)** | Simple Data | 908k rows/s | **993k rows/s** | **+9.3%** |
 | **Huge (170 MB)** | Quoted Data | 638k rows/s | **707k rows/s** | **+10.8%** |
 
-## Comparison Record vs RecordView
+## Zero-Copy Architecture: Record vs RecordView
 
-Newly added benchmarks `benchmarks/src/record_vs_recordview_benchmark.cpp` show that using `RecordView` instead of `Record` increases performance by roughly **~2x**, because we avoid copying data — fields are returned as `std::string_view` pointing directly into the parse buffer.
+Using `RecordView` instead of standard `Record` eliminates `std::string` heap allocations by returning `std::string_view` pointing directly into the internal buffer. 
+
+When combined with Hardware Acceleration (`SimdParser`), removing the memory allocation bottleneck allows the CPU to fully unleash the power of vector instructions, creating a massive compounding effect on throughput.
 
 #### Throughput Improvement (Higher is Better)
-| Dataset Size | Record | RecordView | Improvement |
+
+*Benchmarks run on the Big dataset (~60K rows).*
+
+| Parser | Record (std::string) | RecordView (Zero-Copy) | Throughput Gain |
 | :--- | :--- | :--- | :--- |
-| **Small (0.0132 MB)** | 623k rows/s | **1.349M rows/s** | **~2.17x** |
-| **Medium (0.132 MB)** | 716k rows/s | **1.366M rows/s** | **~1.91x** |
-| **Big (1.32 MB)** | 718k rows/s | **1.378M rows/s** | **~1.92x** |
+| **SimpleParser** | ~718 k rows/s | ~1.37 M rows/s | **+91%** |
+| **SimdParser** | ~873 k rows/s | **~1.73 M rows/s** ⭐ | **+98% (~2x faster)** |
 
-#### Efficiency (CPU Time) (Lower is Better)
-*For Big Simple Data (1.32 MB, 60K rows):*
-*   **Record:** 83.5ms CPU time
-*   **RecordView:** 43.5ms CPU time
-*   **Result:** `RecordView` does the same work using **~48% less CPU
-    time**, freeing up the processor for other threads.
+#### Efficiency & Synergy
+*   **The Allocation Bottleneck:** With the standard `Record` API, the `SimdParser` is only ~21% faster than `SimpleParser` because the CPU is heavily throttled by continuous `malloc/new` calls.
+*   **The Zero-Copy Synergy:** When allocations are completely removed (`RecordView`), the `SimdParser` throughput jumps to **~38 MiB/s**, becoming **~26% faster** than the `SimpleParser` in the exact same zero-copy mode.
+*   **Result:** The combination of `ViewReader` + `SimdParser` represents the absolute peak performance configuration for this engine, reaching over **1.73 Million rows per second**.
 
+## Recommendations
 
-### Key Findings
-
-Additionally, I added SIMD parser into this benchmark to find the fastest solution for simple data.
-`SimdParser + ViewReader` can achieve speed: **`1.73759M/s`**!.
+| Use Case | Recommended Configuration |
+|----------|---------------------------|
+| Maximum throughput (No quotes) | `ViewReader` + `SimdParser` + `MappedBuffer` |
+| Clean, well-formed CSV | `StrictParser` + 2-4 KB buffer |
+| Simple CSV without quotes | `SimpleParser` + default buffer |
+| Real-world messy data | `LenientParser` (~48% slower) |
+| Memory-constrained | 256-byte buffer (~1.5% slower) |
 
 ---
 
