@@ -42,6 +42,9 @@
 - ☑️ Configurable (option as constructor argument) header position (-1 for no_header)
 - ☑️ Support Linux OS
 - ☑️ Support for row and column where errors occurs with suggestion ("if this is not the root cause - check quotes that ends here or delimiters")
+- ☑️ **Hardware-Accelerated Parsing (SIMD SSE2)**
+- ☑️ **Zero-copy parsing mode (`RecordView`)**
+- ☑️ **Memory-mapped file I/O (`MappedBuffer`) for extreme performance**
 
 ### Should Have (Phase 2)
 
