@@ -31,7 +31,6 @@
 ### Must Have (MVP)
 
 - ☑️ Parse RFC 4180 compliant CSVs
-- ⬜️ Inform about constraints exceeded (e.g.value too big)
 - ☑️ Row-by-row iteration with STL-compatible iterators
 - ☑️ Streaming mode -- $O(row)$ memory usage -- read row by row from file
 - ☑️ Access field by index within record (row)
@@ -48,9 +47,9 @@
 
 - ☑️ Support access by column name
 - ⬜️ Additional reading mode - in-memory mode (full load, enables random access as static key-value database)
-- ⬜️ Memory-mapped file I/O for performance
+- ☑️ Memory-mapped file I/O for performance
 - ⬜️ [InMemory Database] Column-wise access (iterate entire column)
-- ⬜️ Configurable error handling (strict/lenient/callback)
+- ☑️ Configurable error handling (strict/lenient/callback)
 - ☑️ Type converters via template specialization
 - ⬜️ Settings and restrictions
 - ⬜️ Schema validation with custom rules (string in standard constructor or from file in special constructor or function that loads schema from file)
@@ -58,6 +57,7 @@
 - ⬜️ Warining queue (as additional info return by getter function)
 - ☑️ Different line ending support (LF, CRLF, CR)
 - ⬜️ on-reading filtering and data manipulation - using callback functions
+- ⬜️ Inform about constraints exceeded (e.g.value too big)
 
 ### Could Have (Future)
 
