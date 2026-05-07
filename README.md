@@ -3,17 +3,24 @@
 </p>
 
 # csvengine
+
+*A personal learning project with C++20 exploring high-performance CSV parsing techniques.*
+
 ![Language](https://img.shields.io/badge/language-C%2B%2B20-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Build](https://img.shields.io/badge/build-CMake-orange)
 ![Platform](https://img.shields.io/badge/platform-Linux-lightgrey)
 ![Status](https://img.shields.io/badge/status-Alpha%20%2F%20Under%20Development-yellow)
 
-**High-performance C++20 CSV parser with streaming and type-safe conversions.**
+## About This Project
 
-`csvengine` is a modern C++ library designed to parse RFC 4180 compliant CSV files efficiently. It focuses on low memory usage (streaming mode), ease of integration, and type safety via `std::optional` and C++20 concepts.
+`csvengine` is a personal learning project, developed in spare time to deepen my expertise in modern C++20 features (concepts, ranges, `std::from_chars`), low-level performance engineering (SIMD intrinsics, memory-mapped I/O, zero-copy parsing), and library design topics that don't typically come up in my day job.
 
-The architecture is designed as a balanced trade-off between **Clean Code / OOP principles** and **High Performance**. It utilizes SIMD (SSE2) intrinsics, Memory Mapping (mmap), and zero-copy string views to achieve >1.7 Million rows/sec throughput, while keeping the API fully object-oriented and extensible.
+The codebase is ***not production-hardened***: it lacks fuzzing, sanitizer-enabled CI, full cross-platform testing, and complete error reporting. These are conscious trade-offs given the time budget. See Roadmap for what's intentionally missing.
+
+What it does demonstrate: spec-driven design, iterative refactoring, benchmark-driven optimization, and architectural reasoning around performance trade-offs.
+
+`csvengine` parses RFC 4180 compliant CSV files. The implementation explores trade-offs between OOP design and low-level performance: SIMD (SSE2), memory-mapped I/O, and zero-copy string views, reaching `~1.73M rows/sec` on commodity hardware in benchmark scenarios.
 
 ## Table of Contents
 - [Features](#features)
@@ -30,7 +37,7 @@ The architecture is designed as a balanced trade-off between **Clean Code / OOP 
 - [Roadmap](#roadmap)
 - [License](#license)
 
-## Features
+## Technical Highlights
 
 | Feature | Description |
 |---------|-------------|
@@ -51,75 +58,6 @@ For detailed information about performance analysis, buffer tuning, and the impa
 
 **Peak Performance Highlight:**  
 Combining the `SimdParser` with `RecordView` (Zero-Copy) and Memory Mapped files (`MappedBuffer`) yields parsing speeds exceeding **1.73 Million rows per second** (~38 MB/s) on standard laptop hardware.
-
-## Requirements
-
-*   **Operating System:** Linux (Primary), Windows (WSL recommended), macOS.
-*   **Compiler:** Must support **C++20**.
-    *   GCC 11+
-    *   Clang 14+
-    *   MSVC 2022+
-*   **Build System:** CMake 3.20 or higher.
-*   **Dependencies:**
-    *   **GoogleTest/Benchmark:** Automatically fetched via CMake for unit testing and profiling.
-
-## Quick Start
-
-### Installation
-
-#### Option 1: CMake FetchContent (Recommended)
-```cmake
-include(FetchContent)
-FetchContent_Declare(
-  csvengine
-  GIT_REPOSITORY https://github.com/bsobocki/csvengine.git
-  GIT_TAG        v1.0.0
-)
-FetchContent_MakeAvailable(csvengine)
-
-target_link_libraries(your_app PRIVATE csvengine::csvengine)
-```
-
-#### Option 2: Git Submodule
-```bash
-git submodule add https://github.com/bsobocki/csvengine.git external/csvengine
-```
-```cmake
-add_subdirectory(external/csvengine)
-target_link_libraries(your_app PRIVATE csvengine::csvengine)
-```
-
-## Building the Project
-
-This project does not allow in-source builds. You must create a build directory.
-
-### 1. Clone
-```bash
-git clone https://github.com/bsobocki/csvengine.git
-cd csvengine
-```
-
-### 2. Configure & Build
-```bash
-./go.sh build
-```
-
-### 3. Run Tests
-```bash
-./go.sh tests
-```
-
-### 4. Run Benchmarks
-```bash
-./go.sh benchmarks
-```
-
-### 5. Run Demo
-```bash
-./go.sh demo
-```
-
----
 
 ## API Reference
 
@@ -255,8 +193,8 @@ for (const auto& record : reader) {
 | Requirement | Minimum Version |
 |-------------|-----------------|
 | CMake | 3.20+ |
-| C++ Compiler | GCC 11+, Clang 14+, MSVC 2022+ |
-| OS | Linux (primary), macOS, Windows (WSL) |
+| C++ Compiler | GCC 11+ |
+| OS | Linux (primary), WSL |
 
 ### Build Commands
 
@@ -289,13 +227,8 @@ ctest --output-on-failure
 
 ## Testing
 
-The project includes **over 300 unit tests** ensuring enterprise-grade stability. It covers:
-
-- RFC 4180 parsing logic and state machines
-- Edge cases in quoted/escaped text and embedded delimiters
-- Hardware architecture fallback mechanisms
-- Buffer shifting and string_view memory safety logic
-- Exception handling and typed data conversion
+The project includes over 300 unit tests covering RFC 4180 edge cases, parser state machines, and buffer/lifetime logic.
+Test discipline was applied throughout development, though fuzzing and sanitizer-driven testing are intentionally outside the current scope (see Roadmap).
 
 ```bash
 # Run all tests
@@ -353,7 +286,7 @@ csvengine/
 
 ## Roadmap
 
-### Version 1.0 (Current)
+### Currently Implemented
 - [x] RFC 4180 compliant parsing
 - [x] Streaming architecture
 - [x] Zero-copy parsing capability
@@ -361,15 +294,15 @@ csvengine/
 - [x] Hardware acceleration via SIMD (SSE2)
 - [x] Type-safe field access (`std::from_chars`)
 - [x] Strict and lenient parsing modes
-- [x] Comprehensive benchmark & test suite
+- [x] Benchmark & test suite (300+ unit tests, Google Benchmark profiling)
 
-### Version 1.1 (Planned)
+### Explored Next
 - [ ] Schema validation with custom rules
 - [ ] Column-wise iteration
 - [ ] Statistics during parsing (min/max/count)
 - [ ] Warning queue for non-fatal issues
 
-### Future
+### Beyond Current Scope
 - [ ] In-memory database mode with random access
 - [ ] Static schema projection (CRTP / Compile-time optimizations)
 - [ ] CSV writing support
