@@ -6,6 +6,12 @@
 
 namespace csv {
 
+class ParseError : public std::runtime_error {
+public:
+    ParseError(size_t line_num, std::string_view msg) :
+        std::runtime_error("ParseError: line: " + std::to_string(line_num) + ", msg: " + std::string(msg.data())) {}
+};
+
 class BufferError : public std::runtime_error {
 public:
     BufferError(): std::runtime_error("Buffer is in bad state during initialization") {}

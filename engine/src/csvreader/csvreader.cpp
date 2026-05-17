@@ -78,7 +78,7 @@ bool Reader::next() {
         }
 
         if (result == ParseStatus::fail) {
-            break;
+            throw ParseError(line_number_, parser_->err_msg());
         }
     }
 

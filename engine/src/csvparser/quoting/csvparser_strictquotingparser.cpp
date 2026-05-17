@@ -17,9 +17,13 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
     auto field_start = buff_it;
     size_t current_field_quote_literals = 0;    
 
-    const auto is_begin   = [&](auto it) { return it == buffer.data(); };
-    const auto is_end     = [&](auto it) { return it == buff_end; };
-    const auto consume    = [&](size_t consume_size = 1) {
+    const auto set_err_msg = [&](const std::string& msg) {
+        size_t context_size = consumed_ > 20 ? 20 : consumed_;
+        this->err_msg_ = msg + " Context: " + std::string(buff_it - context_size, buff_it);
+    };
+    const auto is_begin    = [&](auto it) { return it == buffer.data(); };
+    const auto is_end      = [&](auto it) { return it == buff_end; };
+    const auto consume     = [&](size_t consume_size = 1) {
         buff_it += consume_size;
         consumed_ += consume_size;
     };
@@ -54,6 +58,8 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
     if (config_.line_ending == Config::LineEnding::crlf && pending_cr_) {
         pending_cr_ = false;
         if (!is_newline(*buff_it)) {
+            consume();
+            set_err_msg("Line ending is CRLF, but different character occured after \\r than \\n.");
             return ParseStatus::fail;
         }
         else {
@@ -77,6 +83,7 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
         }
         else if (!is_delim(*buff_it) && !is_newline(*buff_it)) {
             consume();
+            set_err_msg("Additional character found after closing quote character!");
             return ParseStatus::fail;
         }
         else if (is_newline(*buff_it)) {
@@ -98,6 +105,8 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
                     field_end--;
                 }
                 else {
+                    consume();
+                    set_err_msg("Line ending is CRLF, but \\n found without previous \\r chracter!");
                     return ParseStatus::fail;
                 }
             }
@@ -138,6 +147,8 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
                                 consume(3);
                                 return ParseStatus::complete;
                             }
+                            consume();
+                            set_err_msg("Line ending is CRLF, but different character occured after \\r than \\n.");
                             return ParseStatus::fail;
                         }
                         else {
@@ -152,6 +163,8 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
 
                     // wrong quoting => data after quotes
                     if (!is_next_delim && !is_next_newline) {
+                        consume();
+                        set_err_msg("Additional character found after closing quote character!");
                         return ParseStatus::fail;
                     }
                     
@@ -184,6 +197,8 @@ ParseStatus StrictQuotingParser::parse(std::string_view buffer) {
                 field_start = buff_it + 1; // skip open quote in field
             }
             else {
+                consume();
+                set_err_msg("Start quote found after field start!");
                 return ParseStatus::fail;
             }
         }
