@@ -40,34 +40,36 @@ ParseStatus LenientQuotingParser::parse(std::string_view buffer) {
             quoted_field = false;
         }
 
-        if (is_quote(*field_start)) {
-            field_start++;
-            quoting = true;
-        }
+        if (field_start != end_it) {
+            if (is_quote(*field_start)) {
+                field_start++;
+                quoting = true;
+            }
 
-        auto raw_len = std::distance(field_start, end_it);
-        field_ref.reserve(field_ref.size() + raw_len); // even if we will use slightly less space - we will avoid repeated reallocations
+            auto raw_len = std::distance(field_start, end_it);
+            field_ref.reserve(field_ref.size() + raw_len); // even if we will use slightly less space - we will avoid repeated reallocations
 
-        auto it = field_start;
-        while (it != end_it) {
-            if (is_quote(*it)) {
-                auto next = it + 1;
+            auto it = field_start;
+            while (it != end_it) {
+                if (is_quote(*it)) {
+                    auto next = it + 1;
 
-                if (quoting) {
-                    // "" escape - add one quote, skip both
-                    if (next != end_it && is_quote(*next)) {
-                        field_ref += *it;
-                        it += 2;
-                        continue;
-                    }
-                    else {
-                        quoting = false;
-                        it++;
-                        continue;
+                    if (quoting) {
+                        // "" escape - add one quote, skip both
+                        if (next != end_it && is_quote(*next)) {
+                            field_ref += *it;
+                            it += 2;
+                            continue;
+                        }
+                        else {
+                            quoting = false;
+                            it++;
+                            continue;
+                        }
                     }
                 }
+                field_ref += *it++;
             }
-            field_ref += *it++;
         }
         incomplete_last_read_ = false;
     };
