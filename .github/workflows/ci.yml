@@ -22,3 +22,14 @@ jobs:
       
       - name: Build and run tests
         run: ./go.sh build tests
+
+  sanitizer-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build & test with ASan+UBSan
+        run: |
+          mkdir build-san && cd build-san
+          cmake .. -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -g -O1"
+          cmake --build . --parallel
+          ctest --output-on-failure
