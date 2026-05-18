@@ -4,7 +4,6 @@
 #include <csvbuffer/csvstreambuffer.hpp>
 #include <csvbuffer/csvmappedbuffer.hpp>
 #include <optional>
-#include <format>
 
 namespace csv {
 
