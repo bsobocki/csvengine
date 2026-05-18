@@ -70,6 +70,28 @@ function do_build() {
   cd .. # Return to root so next commands work correctly
 }
 
+function do_build_sanitizers() {
+  mkdir build-asan
+  cd build-asan
+  
+  echo "┌──────────────────────────────────────┐"
+  echo "│ Building project with sanitizers...  │"
+  echo "└──────────────────────────────────────┘"
+
+  cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -g -O1"
+  STATUS=$?
+
+  if [ $STATUS -ne 0 ]; then
+    cd ..
+    return
+  fi
+
+  cmake --build . --parallel
+  STATUS=$?
+
+  cd ..
+}
+
 function do_run() {
   local executable="./build/demo/csvengine_demo"
   if [ -f $executable ]; then
@@ -209,6 +231,27 @@ function do_run_benchmarks() {
   fi
 }
 
+function do_runAll_sanitizers() {
+  cd build-asan
+
+  echo "┌─────────────────────────────────────────────────────────────────┐"
+  echo "│ Running all tests and performance benchmarks with sanitizers... │"
+  echo "└─────────────────────────────────────────────────────────────────┘"
+
+  ctest --output-on-failure
+  STATUS=$?
+
+  if [ $STATUS -ne 0 ]; then
+    cd ..
+    return
+  fi
+
+  ./benchmarks/run_benchmarks --benchmark_min_time=1s
+  STATUS=$?
+  
+  cd ..
+}
+
 while [[ $# -gt 0 ]]; do
   case $1 in
     -c|--clean|clean)
@@ -223,8 +266,18 @@ while [[ $# -gt 0 ]]; do
       do_build
       ;;
 
+    -bs|--buildSan|--build-san|--build-sanitizers|--buildSanitizers|buildSan|build-san|build-sanitizers|buildSanitizers)
+      do_build_sanitizers
+      ;;
+
+    -ras|--runAllSan|--runAll-san|--runAll-sanitizers|--runAllSanitizers|runAllSan|runAll-san|runAll-sanitizers|runAllSanitizers)
+      do_runAll_sanitizers
+      break
+      ;;
+
     -r|--run|run|demo)
       do_run
+      break
       ;;
 
     --rebuild|rebuild)
