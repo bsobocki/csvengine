@@ -208,6 +208,11 @@ TEST_F(StrictParserTest, Buffer_SingleCharChunks) {
     EXPECT_EQ(strict_parser->fields(), (std::vector<std::string>{"a", "b"}));
 }
 
+TEST_F(StrictParserTest, Buffer_EndsExactlyAtDelimiter_NoOverflow) {
+    EXPECT_EQ(strict_parser->parse("a,b,"), ParseStatus::need_more_data);
+    EXPECT_EQ(strict_parser->fields(), (std::vector<std::string>{"a","b",""}));
+}
+
 // ============================================================
 // CUSTOM DELIMITER
 // ============================================================

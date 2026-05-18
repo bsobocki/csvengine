@@ -676,6 +676,11 @@ TEST_F(LenientParserTest, Buffer_ClosingQuoteAtEnd_FollowedByDelimiter) {
     EXPECT_EQ(lenient_parser->fields(), (std::vector<std::string>{"a","b"}));
 }
 
+TEST_F(LenientParserTest, Buffer_EndsExactlyAtDelimiter_NoOverflow) {
+    EXPECT_EQ(lenient_parser->parse("a,b,"), ParseStatus::need_more_data);
+    EXPECT_EQ(lenient_parser->fields(), (std::vector<std::string>{"a","b",""}));
+}
+
 TEST_F(LenientParserTest, Lenient_SpaceBeforeQuote_AfterDelimiter_Complete) {
     ExpectParse(lenient_parser, "a, \"b\"\n", ParseStatus::complete, (std::vector<std::string>{"a"," \"b\""}));
 }
