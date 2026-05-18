@@ -70,7 +70,7 @@ Combining the `SimdParser` with `RecordView` (Zero-Copy) and Memory Mapped files
 | `next()` | Advance to next record, returns `false` at EOF |
 | `current_record()` | Get current `Record` or `RecordView` reference |
 | `headers()` | Get column names (if `has_header=true`) |
-| `line_number()` | Current line number (1-indexed) |
+| `line_number()` | Current line number |
 | `record_size()` | Number of fields per record |
 | `good()` | Check if reader is in valid state |
 | `begin()` / `end()` | Range-based for loop support |
