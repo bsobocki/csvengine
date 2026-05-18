@@ -45,6 +45,25 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(benchmark)
 
+# --- additional csv repository for benchmarks ---
+
+option(CSVENGINE_BUILD_EXTERNAL_BENCHMARKS "Fetch external CSV libraries for comparison" ON)
+
+if(CSVENGINE_BUILD_EXTERNAL_BENCHMARKS)
+    # fast-cpp-csv-parser is a header-only library
+    FetchContent_Declare(
+        fast_cpp_csv_parser
+        GIT_REPOSITORY https://github.com/ben-strasser/fast-cpp-csv-parser.git
+        GIT_TAG        master
+    )
+    FetchContent_MakeAvailable(fast_cpp_csv_parser)
+
+    add_library(fast_cpp_csv_parser INTERFACE)
+    target_include_directories(fast_cpp_csv_parser INTERFACE
+        ${fast_cpp_csv_parser_SOURCE_DIR}
+    )
+endif()
+
 # Generate compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 

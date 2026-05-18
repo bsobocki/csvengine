@@ -309,6 +309,10 @@ csvengine/
 - [ ] Compressed file support (gzip)
 - [ ] Multi-threaded chunk-based parsing
 
+## Tools used
+
+Note: While the core engine and architecture were written by hand as a learning exercise, Large Language Models (LLMs) were used as an assistant for generating boilerplate code, test harnesses, and Google Benchmark integrations.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
