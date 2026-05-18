@@ -287,56 +287,58 @@ When combined with Hardware Acceleration (`SimdParser`), removing the memory all
 
 ## External Library Comparison
 
-To put `csvengine`'s performance in context, we benchmarked it against [`fast-cpp-csv-parser`](https://github.com/ben-strasser/fast-cpp-csv-parser) by Ben Strasser — a highly optimized, header-only CSV reader widely considered one of the fastest available in C++.
+> **Note on Methodology:** The Google Benchmark harness and integration code for these external libraries were initially generated with the assistance of an AI (LLM) to accelerate boilerplate creation, and subsequently reviewed and verified by hand.
 
-### Methodology
-*   Both libraries processed the exact same memory-mapped temporary files.
-*   `fast-cpp-csv-parser` requires the number of columns to be specified at compile-time (e.g., `io::CSVReader<3>`). This gives the compiler a massive advantage (loop unrolling, predictable branching), whereas `csvengine` discovers columns at runtime.
-*   Results below are based on the "Huge" (1,000,000 multiplier) datasets.
+To provide objective context for `csvengine`'s performance, we benchmarked it against two distinct architectural approaches in the C++ ecosystem:
+1. **[`fast-cpp-csv-parser`](https://github.com/ben-strasser/fast-cpp-csv-parser)**: A header-only streaming reader optimized for maximum throughput. It requires the schema (column count and types) to be defined at compile-time.
+2. **[`rapidcsv`](https://github.com/d99kris/rapidcsv)**: A widely used DOM-based library that loads the entire CSV file into memory as vectors of strings for ease of use.
+
+*All benchmarks process the exact same memory-mapped temporary files. Results below are based on the "Huge" (1,000,000 multiplier) datasets.*
 
 ### 1. Simple Data (Unquoted)
 
 | Parser Configuration | Throughput | Relative Speed |
 | :--- | :--- | :--- |
-| **fast-cpp-csv-parser** | **~2.24 M rows/s** | **Baseline (1.00x)** |
-| `csvengine` Peak (ViewReader + SIMD + Mmap) | ~1.75 M rows/s | 0.78x |
-| `csvengine` Owning (Reader + SimpleParser) | ~0.68 M rows/s | 0.30x |
+| **`fast-cpp-csv-parser`** | **~2.24 M rows/s** | **Baseline (1.00x)** |
+| `csvengine` (ViewReader + SIMD + Mmap) | ~1.74 M rows/s | 0.78x |
+| `csvengine` (Reader + SimpleParser) | ~0.67 M rows/s | 0.30x |
+| `rapidcsv` | ~0.51 M rows/s | 0.23x |
 
-**Analysis:** For simple data, `fast-cpp-csv-parser` is approximately **28% faster** than `csvengine`'s absolute peak configuration. Considering `csvengine` operates entirely at runtime without compile-time schema knowledge, achieving ~78% of fast-cpp's throughput is a highly competitive result.
+**Analysis:**
+`fast-cpp-csv-parser` achieves the highest throughput because it requires the column count to be known at compile-time (e.g., `io::CSVReader<3>`). This allows the compiler to unroll the parsing loop, eliminating runtime branching and bounds checking. 
+
+`csvengine`, by contrast, operates dynamically and discovers the column count at runtime. By utilizing SIMD and zero-copy string views, it reaches ~78% of the static parser's throughput. Both streaming parsers significantly outperform `rapidcsv` (~3.4x to ~4.4x faster), as the DOM-based approach incurs substantial overhead from allocating standard strings for every individual cell.
 
 ### 2. Quoted Data
 
-Comparing quoted parsers requires a distinction between "Full RFC 4180" compliance and "Standard Quoting".
+Comparing quoted parsers requires differentiating between "Full RFC 4180" compliance and "Standard Quoting".
 
 **Full RFC 4180 (Embedded Newlines)**
 `csvengine` fully supports RFC 4180 (§2.6), allowing literal newlines (`\n`) *inside* quoted fields. 
-`fast-cpp-csv-parser` **does not support this feature** and throws an exception when attempting to parse `csvengine`'s default quoted dataset. 
-*   *Result: `csvengine` (~588 k rows/s) is the only valid option for fully compliant parsing.*
+Neither `fast-cpp-csv-parser` nor `rapidcsv` (in its default safe configuration) support this feature without throwing exceptions or misaligning data.
+*   *Result: `csvengine` (~585 k rows/s) successfully parses this dataset, whereas the others cannot be directly compared.*
 
 **Simple Quoting (No Embedded Newlines)**
-Using an alternate dataset containing quotes, commas, and escaped quotes (`""`), but *no embedded newlines*, allows for a fair head-to-head comparison:
+Using an alternate dataset containing quotes, commas, and escaped quotes (`""`), but *no embedded newlines*, provides a valid baseline for comparison:
 
 | Parser Configuration | Throughput | Relative Speed |
 | :--- | :--- | :--- |
-| **fast-cpp-csv-parser** (`double_quote_escape`) | **~1.30 M rows/s** | **Baseline (1.00x)** |
-| `csvengine` Peak (`StrictQuotingParser`) | ~0.63 M rows/s | 0.48x |
+| **`fast-cpp-csv-parser`** (`double_quote_escape`) | **~1.26 M rows/s** | **Baseline (1.00x)** |
+| `csvengine` (`StrictQuotingParser`) | ~0.63 M rows/s | 0.50x |
+| `rapidcsv` | ~0.29 M rows/s | 0.23x |
 
-**Analysis:** For quoted data, the gap widens significantly. `fast-cpp-csv-parser` is **over 2 times faster (2.06x)** than `csvengine`. State-machine-based quoting (`StrictQuotingParser`) is heavily heavily penalized by branch mispredictions, whereas fast-cpp's compile-time unrolling handles escaped quotes far more efficiently.
+**Analysis:**
+Parsing quoted data typically relies on state machines, which are vulnerable to CPU branch mispredictions. `fast-cpp-csv-parser` mitigates this through compile-time loop unrolling and direct memory assignment, resulting in approximately 2x the throughput of `csvengine`. Meanwhile, `csvengine` maintains a ~2.1x throughput advantage over the DOM-based `rapidcsv`.
 
-### Honest Takeaways
+### Architectural Trade-offs Summary
 
-**Why `fast-cpp-csv-parser` is faster (especially for quotes):**
-1. **Compile-Time Knowledge:** Providing `<3>` as a template parameter allows the compiler to unroll the parsing loop exactly 3 times per row, destroying branching overhead.
-2. **Direct Memory Assignment:** It assigns data directly into user-provided `std::string` references, avoiding intermediate objects.
-3. **Maturity:** Hand-tuned performance over a decade.
+The benchmark results highlight standard software engineering trade-offs:
 
-**Choose `csvengine` when you need:**
-1. **Runtime Flexibility:** You do not need to know the number of columns at compile-time.
-2. **Full RFC 4180 Compliance:** Embedded newlines inside quoted fields are handled flawlessly.
-3. **API Ergonomics:** Range-based for loops, iterator support, column-name lookups (`row["age"]`), and type-safe `std::from_chars` conversions (`row.get<int>(1)`).
-4. **Architectural Control:** Swap between `StreamBuffer` and `MappedBuffer`, or use `RecordView` for strict zero-copy operations.
+1. **`fast-cpp-csv-parser`**: Ideal for environments with strict performance requirements where the CSV schema is static and known ahead of time, provided the data does not contain embedded newlines.
+2. **`rapidcsv`**: Appropriate for smaller datasets where memory consumption is not a concern, and the developer prefers interacting with the entire dataset at once (e.g., matrix-like row/column access).
+3. **`csvengine`**: Designed as a middle ground. It provides high-throughput streaming (constant $O(1)$ memory usage) and strict RFC 4180 compliance, while maintaining runtime flexibility for files with unknown or varying column counts. 
 
-*Note: Closing the performance gap using "Static Schema Projection" (compile-time loop unrolling) is planned for future development (See SPECIFICATION.md, Section 12.3).*
+*Note: Implementing "Static Schema Projection" (compile-time loop unrolling) to close the performance gap for static schemas is documented as a future architectural goal (See SPECIFICATION.md, Section 12.3).*
 
 
 ## Notes
@@ -452,30 +454,38 @@ BM_RecordComparison_Record_SimdParser/10000/iterations:50          69946617 ns  
 BM_RecordComparison_RecordView_SimpleParser/10000/iterations:50    44447092 ns     43544062 ns           50   bytes_per_second=30.2239Mi/s items_per_second=1.37789M/s
 BM_RecordComparison_RecordView_SimdParser/10000/iterations:50      35139607 ns     34530002 ns           50   bytes_per_second=38.1138Mi/s items_per_second=1.73759M/s
 
-SimpleDataFixture/CSVREADER_COMP_CsvEngine_Fastest_Simple/100                       1.31 ms        0.419 ms         1669   bytes_per_second=31.4078Mi/s items_per_second=1.4295M/s
-SimpleDataFixture/CSVREADER_COMP_CsvEngine_Fastest_Simple/1000                      6.60 ms         3.49 ms          200   bytes_per_second=37.6767Mi/s items_per_second=1.71741M/s
-SimpleDataFixture/CSVREADER_COMP_CsvEngine_Fastest_Simple/10000                     57.7 ms         34.2 ms           20   bytes_per_second=38.4561Mi/s items_per_second=1.75319M/s
-SimpleDataFixture/CSVREADER_COMP_CsvEngine_Fastest_Simple/1000000                   5795 ms         3423 ms            1   bytes_per_second=38.4434Mi/s items_per_second=1.75264M/s
-SimpleDataFixture/CSVREADER_COMP_CsvEngine_OwningRecord_Simple/100                  1.78 ms        0.955 ms          725   bytes_per_second=13.7806Mi/s items_per_second=627.215k/s
-SimpleDataFixture/CSVREADER_COMP_CsvEngine_OwningRecord_Simple/1000                 12.2 ms         8.87 ms           78   bytes_per_second=14.839Mi/s items_per_second=676.403k/s
-SimpleDataFixture/CSVREADER_COMP_CsvEngine_OwningRecord_Simple/10000                 113 ms         88.2 ms            8   bytes_per_second=14.9173Mi/s items_per_second=680.073k/s
-SimpleDataFixture/CSVREADER_COMP_CsvEngine_OwningRecord_Simple/1000000             11939 ms         8769 ms            1   bytes_per_second=15.0089Mi/s items_per_second=684.258k/s
-SimpleDataFixture/CSVREADER_COMP_FastCppCsvParser_Simple/100                        1.01 ms        0.324 ms         2155   bytes_per_second=40.635Mi/s items_per_second=1.84947M/s
-SimpleDataFixture/CSVREADER_COMP_FastCppCsvParser_Simple/1000                       3.89 ms         2.68 ms          260   bytes_per_second=49.1795Mi/s items_per_second=2.24173M/s
-SimpleDataFixture/CSVREADER_COMP_FastCppCsvParser_Simple/10000                      31.1 ms         26.4 ms           27   bytes_per_second=49.8538Mi/s items_per_second=2.27281M/s
-SimpleDataFixture/CSVREADER_COMP_FastCppCsvParser_Simple/1000000                    2695 ms         2673 ms            1   bytes_per_second=49.2271Mi/s items_per_second=2.24428M/s
-QuotedDataFixture/CSVREADER_COMP_CsvEngine_Fastest_Quoted/100                       1.56 ms        0.586 ms         1172   bytes_per_second=28.8279Mi/s items_per_second=510.635k/s
-QuotedDataFixture/CSVREADER_COMP_CsvEngine_Fastest_Quoted/1000                      9.08 ms         5.17 ms          134   bytes_per_second=32.6262Mi/s items_per_second=579.655k/s
-QuotedDataFixture/CSVREADER_COMP_CsvEngine_Fastest_Quoted/10000                      106 ms         52.5 ms           13   bytes_per_second=32.1718Mi/s items_per_second=571.754k/s
-QuotedDataFixture/CSVREADER_COMP_CsvEngine_Fastest_Quoted/1000000                   8314 ms         5100 ms            1   bytes_per_second=33.1007Mi/s items_per_second=588.28k/s
-QuotedSimpleDataFixture/CSVREADER_COMP_CsvEngine_Fastest_QuotedSimple/100           1.65 ms        0.714 ms          978   bytes_per_second=26.4305Mi/s items_per_second=558.487k/s
-QuotedSimpleDataFixture/CSVREADER_COMP_CsvEngine_Fastest_QuotedSimple/1000          10.1 ms         6.40 ms          106   bytes_per_second=29.5148Mi/s items_per_second=625.066k/s
-QuotedSimpleDataFixture/CSVREADER_COMP_CsvEngine_Fastest_QuotedSimple/10000         94.0 ms         63.1 ms           11   bytes_per_second=29.9439Mi/s items_per_second=634.296k/s
-QuotedSimpleDataFixture/CSVREADER_COMP_CsvEngine_Fastest_QuotedSimple/1000000       9667 ms         6340 ms            1   bytes_per_second=29.7833Mi/s items_per_second=630.909k/s
-QuotedSimpleDataFixture/CSVREADER_COMP_FastCppCsvParser_QuotedSimple/100            1.06 ms        0.366 ms         1919   bytes_per_second=51.6439Mi/s items_per_second=1.09126M/s
-QuotedSimpleDataFixture/CSVREADER_COMP_FastCppCsvParser_QuotedSimple/1000           4.34 ms         3.10 ms          226   bytes_per_second=60.914Mi/s items_per_second=1.29004M/s
-QuotedSimpleDataFixture/CSVREADER_COMP_FastCppCsvParser_QuotedSimple/10000          36.7 ms         30.6 ms           23   bytes_per_second=61.7214Mi/s items_per_second=1.30743M/s
-QuotedSimpleDataFixture/CSVREADER_COMP_FastCppCsvParser_QuotedSimple/1000000        3120 ms         3082 ms            1   bytes_per_second=61.275Mi/s items_per_second=1.29801M/s
+SimpleDataFixture/CSVREADER_COMP_CsvEngine_Fastest_Simple/100                       1.31 ms        0.426 ms         1599   bytes_per_second=30.8645Mi/s items_per_second=1.40477M/s
+SimpleDataFixture/CSVREADER_COMP_CsvEngine_Fastest_Simple/1000                      6.45 ms         3.51 ms          200   bytes_per_second=37.517Mi/s items_per_second=1.71013M/s
+SimpleDataFixture/CSVREADER_COMP_CsvEngine_Fastest_Simple/10000                     55.7 ms         34.4 ms           20   bytes_per_second=38.2689Mi/s items_per_second=1.74466M/s
+SimpleDataFixture/CSVREADER_COMP_CsvEngine_Fastest_Simple/1000000                   5783 ms         3455 ms            1   bytes_per_second=38.0898Mi/s items_per_second=1.73652M/s
+SimpleDataFixture/CSVREADER_COMP_CsvEngine_OwningRecord_Simple/100                  1.84 ms        0.965 ms          719   bytes_per_second=13.6372Mi/s items_per_second=620.687k/s
+SimpleDataFixture/CSVREADER_COMP_CsvEngine_OwningRecord_Simple/1000                 11.9 ms         8.97 ms           77   bytes_per_second=14.6687Mi/s items_per_second=668.639k/s
+SimpleDataFixture/CSVREADER_COMP_CsvEngine_OwningRecord_Simple/10000                 119 ms         89.1 ms            8   bytes_per_second=14.7663Mi/s items_per_second=673.188k/s
+SimpleDataFixture/CSVREADER_COMP_CsvEngine_OwningRecord_Simple/1000000             12466 ms         8910 ms            1   bytes_per_second=14.7714Mi/s items_per_second=673.432k/s
+SimpleDataFixture/CSVREADER_COMP_FastCppCsvParser_Simple/100                        1.10 ms        0.330 ms         2135   bytes_per_second=39.8683Mi/s items_per_second=1.81458M/s
+SimpleDataFixture/CSVREADER_COMP_FastCppCsvParser_Simple/1000                       3.86 ms         2.69 ms          256   bytes_per_second=48.9808Mi/s items_per_second=2.23268M/s
+SimpleDataFixture/CSVREADER_COMP_FastCppCsvParser_Simple/10000                      31.2 ms         26.4 ms           27   bytes_per_second=49.9Mi/s items_per_second=2.27492M/s
+SimpleDataFixture/CSVREADER_COMP_FastCppCsvParser_Simple/1000000                    2703 ms         2671 ms            1   bytes_per_second=49.2671Mi/s items_per_second=2.2461M/s
+SimpleDataFixture/CSVREADER_COMP_RapidCsv_Simple/100                                1.98 ms         1.21 ms          564   bytes_per_second=10.8618Mi/s items_per_second=494.366k/s
+SimpleDataFixture/CSVREADER_COMP_RapidCsv_Simple/1000                               13.0 ms         11.3 ms           61   bytes_per_second=11.6437Mi/s items_per_second=530.749k/s
+SimpleDataFixture/CSVREADER_COMP_RapidCsv_Simple/10000                               121 ms          113 ms            6   bytes_per_second=11.6908Mi/s items_per_second=532.977k/s
+SimpleDataFixture/CSVREADER_COMP_RapidCsv_Simple/1000000                           13029 ms        11807 ms            1   bytes_per_second=11.1465Mi/s items_per_second=508.171k/s
+QuotedDataFixture/CSVREADER_COMP_CsvEngine_Fastest_Quoted/100                       1.64 ms        0.594 ms         1195   bytes_per_second=28.4394Mi/s items_per_second=503.754k/s
+QuotedDataFixture/CSVREADER_COMP_CsvEngine_Fastest_Quoted/1000                      9.41 ms         5.30 ms          128   bytes_per_second=31.823Mi/s items_per_second=565.385k/s
+QuotedDataFixture/CSVREADER_COMP_CsvEngine_Fastest_Quoted/10000                     92.4 ms         51.9 ms           13   bytes_per_second=32.5402Mi/s items_per_second=578.301k/s
+QuotedDataFixture/CSVREADER_COMP_CsvEngine_Fastest_Quoted/1000000                   8354 ms         5125 ms            1   bytes_per_second=32.9396Mi/s items_per_second=585.419k/s
+QuotedSimpleDataFixture/CSVREADER_COMP_CsvEngine_Fastest_QuotedSimple/100           1.68 ms        0.715 ms          934   bytes_per_second=26.4203Mi/s items_per_second=558.27k/s
+QuotedSimpleDataFixture/CSVREADER_COMP_CsvEngine_Fastest_QuotedSimple/1000          11.1 ms         6.46 ms          106   bytes_per_second=29.2146Mi/s items_per_second=618.708k/s
+QuotedSimpleDataFixture/CSVREADER_COMP_CsvEngine_Fastest_QuotedSimple/10000         99.0 ms         64.2 ms           11   bytes_per_second=29.3916Mi/s items_per_second=622.596k/s
+QuotedSimpleDataFixture/CSVREADER_COMP_CsvEngine_Fastest_QuotedSimple/1000000       9928 ms         6337 ms            1   bytes_per_second=29.7994Mi/s items_per_second=631.251k/s
+QuotedSimpleDataFixture/CSVREADER_COMP_FastCppCsvParser_QuotedSimple/100            1.09 ms        0.374 ms         1830   bytes_per_second=50.4847Mi/s items_per_second=1.06676M/s
+QuotedSimpleDataFixture/CSVREADER_COMP_FastCppCsvParser_QuotedSimple/1000           4.69 ms         3.26 ms          221   bytes_per_second=57.9388Mi/s items_per_second=1.22703M/s
+QuotedSimpleDataFixture/CSVREADER_COMP_FastCppCsvParser_QuotedSimple/10000          38.7 ms         32.1 ms           22   bytes_per_second=58.9155Mi/s items_per_second=1.248M/s
+QuotedSimpleDataFixture/CSVREADER_COMP_FastCppCsvParser_QuotedSimple/1000000        3209 ms         3170 ms            1   bytes_per_second=59.5609Mi/s items_per_second=1.2617M/s
+QuotedSimpleDataFixture/CSVREADER_COMP_RapidCsv_QuotedSimple/100                    2.39 ms         1.46 ms          471   bytes_per_second=12.9019Mi/s items_per_second=272.623k/s
+QuotedSimpleDataFixture/CSVREADER_COMP_RapidCsv_QuotedSimple/1000                   15.8 ms         13.6 ms           52   bytes_per_second=13.918Mi/s items_per_second=294.757k/s
+QuotedSimpleDataFixture/CSVREADER_COMP_RapidCsv_QuotedSimple/10000                   149 ms          135 ms            5   bytes_per_second=14.0034Mi/s items_per_second=296.631k/s
+QuotedSimpleDataFixture/CSVREADER_COMP_RapidCsv_QuotedSimple/1000000               15718 ms        13723 ms            1   bytes_per_second=13.7594Mi/s items_per_second=291.471k/s
 ```
 
 <details>

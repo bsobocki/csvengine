@@ -62,6 +62,14 @@ if(CSVENGINE_BUILD_EXTERNAL_BENCHMARKS)
     target_include_directories(fast_cpp_csv_parser INTERFACE
         ${fast_cpp_csv_parser_SOURCE_DIR}
     )
+
+    # rapidcsv
+    FetchContent_Declare(
+        rapidcsv
+        GIT_REPOSITORY https://github.com/d99kris/rapidcsv.git
+        GIT_TAG        master
+    )
+    FetchContent_MakeAvailable(rapidcsv)
 endif()
 
 # Generate compile_commands.json

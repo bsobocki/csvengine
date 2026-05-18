@@ -23,6 +23,10 @@
   #include <csv.h>  // fast-cpp-csv-parser (Ben Strasser)
 #endif
 
+#if defined(CSVENGINE_HAVE_RAPIDCSV)
+  #include <rapidcsv.h>
+#endif
+
 namespace csv {
 namespace external_bm {
 
@@ -245,6 +249,55 @@ BENCHMARK_DEFINE_F(QuotedSimpleDataFixture, CSVREADER_COMP_FastCppCsvParser_Quot
 #endif // CSVENGINE_HAVE_FAST_CPP_CSV_PARSER
 
 // =============================================================
+// rapidcsv (d99kris)
+// =============================================================
+#if defined(CSVENGINE_HAVE_RAPIDCSV)
+
+BENCHMARK_DEFINE_F(SimpleDataFixture, CSVREADER_COMP_RapidCsv_Simple)
+(benchmark::State& state) {
+    std::size_t total_rows = 0;
+    for (auto _ : state) {
+        // rapidcsv parses the ENTIRE file in its constructor.
+        // LabelParams(0, -1) means row 0 is header, no column names.
+        rapidcsv::Document doc(filename_, rapidcsv::LabelParams(0, -1));
+        
+        size_t row_count = doc.GetRowCount();
+        for (size_t i = 0; i < row_count; ++i) {
+            // Retrieve row as vector of strings
+            auto row = doc.GetRow<std::string>(i);
+            benchmark::DoNotOptimize(row);
+            ++total_rows;
+        }
+        benchmark::DoNotOptimize(total_rows);
+    }
+    report(state, total_rows);
+}
+
+// NOTE: rapidcsv struggles with embedded newlines in default configuration, 
+// so we only benchmark it on QuotedSimpleDataFixture.
+BENCHMARK_DEFINE_F(QuotedSimpleDataFixture, CSVREADER_COMP_RapidCsv_QuotedSimple)
+(benchmark::State& state) {
+    std::size_t total_rows = 0;
+    for (auto _ : state) {
+        // LabelParams(0, -1) means row 0 is header, no column names.
+        // SeparatorParams defaults to ',' and handles standard quotes.
+        rapidcsv::Document doc(filename_, rapidcsv::LabelParams(0, -1));
+        
+        size_t row_count = doc.GetRowCount();
+        for (size_t i = 0; i < row_count; ++i) {
+            auto row = doc.GetRow<std::string>(i);
+            benchmark::DoNotOptimize(row);
+            ++total_rows;
+        }
+        benchmark::DoNotOptimize(total_rows);
+    }
+    report(state, total_rows);
+}
+
+
+#endif // CSVENGINE_HAVE_RAPIDCSV
+
+// =============================================================
 // Registrations
 // =============================================================
 
@@ -263,6 +316,12 @@ BENCHMARK_REGISTER_F(SimpleDataFixture, CSVREADER_COMP_FastCppCsvParser_Simple)
     ->Unit(benchmark::kMillisecond);
 #endif
 
+#if defined(CSVENGINE_HAVE_RAPIDCSV)
+BENCHMARK_REGISTER_F(SimpleDataFixture, CSVREADER_COMP_RapidCsv_Simple)
+    ->Arg(small_data)->Arg(medium_data)->Arg(big_data)->Arg(huge_data)
+    ->Unit(benchmark::kMillisecond);
+#endif
+
 // --- Quoted data (FULL RFC 4180 with embedded \n) ---
 BENCHMARK_REGISTER_F(QuotedDataFixture, CSVREADER_COMP_CsvEngine_Fastest_Quoted)
     ->Arg(small_data)->Arg(medium_data)->Arg(big_data)->Arg(huge_data)
@@ -275,6 +334,12 @@ BENCHMARK_REGISTER_F(QuotedSimpleDataFixture, CSVREADER_COMP_CsvEngine_Fastest_Q
 
 #if defined(CSVENGINE_HAVE_FAST_CPP_CSV_PARSER)
 BENCHMARK_REGISTER_F(QuotedSimpleDataFixture, CSVREADER_COMP_FastCppCsvParser_QuotedSimple)
+    ->Arg(small_data)->Arg(medium_data)->Arg(big_data)->Arg(huge_data)
+    ->Unit(benchmark::kMillisecond);
+#endif
+
+#if defined(CSVENGINE_HAVE_RAPIDCSV)
+BENCHMARK_REGISTER_F(QuotedSimpleDataFixture, CSVREADER_COMP_RapidCsv_QuotedSimple)
     ->Arg(small_data)->Arg(medium_data)->Arg(big_data)->Arg(huge_data)
     ->Unit(benchmark::kMillisecond);
 #endif

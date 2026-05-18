@@ -21,6 +21,12 @@ target_include_directories(run_benchmarks
 )
 
 if(CSVENGINE_BUILD_EXTERNAL_BENCHMARKS)
-    target_link_libraries(run_benchmarks PRIVATE fast_cpp_csv_parser)
-    target_compile_definitions(run_benchmarks PRIVATE CSVENGINE_HAVE_FAST_CPP_CSV_PARSER=1)
+    target_link_libraries(run_benchmarks PRIVATE 
+      fast_cpp_csv_parser
+      rapidcsv
+    )
+    target_compile_definitions(run_benchmarks PRIVATE 
+      CSVENGINE_HAVE_FAST_CPP_CSV_PARSER=1
+      CSVENGINE_HAVE_RAPIDCSV=1
+    )
 endif()
