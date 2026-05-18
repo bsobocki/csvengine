@@ -54,10 +54,16 @@ What it does demonstrate: spec-driven design, iterative refactoring, benchmark-d
 
 ## Performance Benchmarks
 
-For detailed information about performance analysis, buffer tuning, and the impact of SIMD and Zero-Copy, please read [BENCHMARKING.md](./BENCHMARKING.md).
+For detailed information about performance analysis, buffer tuning, the impact of SIMD/Zero-Copy, and **comparisons with external libraries**, please read [BENCHMARKING.md](./BENCHMARKING.md).
 
 **Peak Performance Highlight:**  
-Combining the `SimdParser` with `RecordView` (Zero-Copy) and Memory Mapped files (`MappedBuffer`) yields parsing speeds exceeding **1.73 Million rows per second** (~38 MB/s) on standard laptop hardware.
+Combining the `SimdParser` with `RecordView` (Zero-Copy) and Memory Mapped files (`MappedBuffer`) yields parsing speeds exceeding **1.74 Million rows per second** (~38 MB/s) on standard laptop hardware.
+
+**External Comparison Context:**  
+When benchmarked against the highly-optimized `fast-cpp-csv-parser` (which uses compile-time loop unrolling) and the popular DOM-based `rapidcsv`, `csvengine` positions itself as a high-performance middle ground:
+* ~78% the speed of static, compile-time parser `fast-cpp-csv-parser` (**1.74 M / 2.24 M rows/sec**).
+* ~3.4x to ~4.4x faster than DOM-based parser `rapidcsv` allocating standard strings.
+* Provides full RFC 4180 compliance (handling embedded newlines), which many specialized parsers do not support.
 
 ## API Reference
 
@@ -245,6 +251,9 @@ You can run them using:
 ```bash
 ./go.sh benchmarks
 ```
+
+> ***Note***: By default, the benchmark build fetches external libraries (fast-cpp-csv-parser, rapidcsv) for comparison. You can disable this by passing `-DCSVENGINE_BUILD_EXTERNAL_BENCHMARKS=OFF` to CMake - check `CMakeLists.txt` files.
+
 If you want to have detailed result summary in JSON or CSV formats you can just add format name as the next argument.
 ```bash
 ./go.sh benchmarks csv
